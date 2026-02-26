@@ -1,0 +1,32 @@
+{
+  "name": "@imazen/crop-image-svelte",
+  "version": "0.1.0",
+  "type": "module",
+  "svelte": "./dist/index.js",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "svelte": "./dist/index.js",
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "files": ["dist"],
+  "scripts": {
+    "build": "vite build"
+  },
+  "dependencies": {
+    "@imazen/crop-image": "workspace:*",
+    "@imazen/crop-image-core": "workspace:*"
+  },
+  "peerDependencies": {
+    "svelte": ">=4.0.0"
+  },
+  "devDependencies": {
+    "svelte": "^5.0.0",
+    "vite": "^6.0.0",
+    "vite-plugin-dts": "^4.0.0"
+  }
+}
