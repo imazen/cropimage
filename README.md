@@ -1,77 +1,115 @@
-# CropImage.NET (originally WebCropImage)
+# `<crop-image>`
 
-Simple, flexible, and configurable image cropping for ASP.NET.
+Zero-dependency web component for image cropping. Outputs [RIAPI](https://riapi.org/) querystrings compatible with Imageflow, ImageResizer, and any RIAPI-compliant server.
 
-This control does not directly generate markup (although it creates javascript references). 
+## Packages
 
-Add this control to a page that already contains an Image control, then set the CropImage.ImageID property to link them.
+| Package | Description |
+|---------|-------------|
+| `@imazen/crop-image-core` | Pure math: types, constraints, state reducer, RIAPI adapters |
+| `@imazen/crop-image` | `<crop-image>` web component (Shadow DOM, ~7KB gzipped) |
+| `@imazen/crop-image-react` | React wrapper + `useCrop` hook |
+| `@imazen/crop-image-svelte` | Svelte action + helpers |
 
+## Quick Start
 
+### Script tag (CDN/IIFE)
 
-## Basic settings
+```html
+<script src="https://unpkg.com/@imazen/crop-image/dist/crop-image.iife.js"></script>
+<crop-image src="/photo.jpg" name="crop"></crop-image>
+```
 
-* ImageID="Image1" - (required) ID of the asp.net Image control to be cropped.
-* CanvasWidth=integer - (required) The maximum display width for the uncropped image. If larger, the image will be scaled down (for display), maintaining aspect ratio.
-* CanvasHeight=integer - (required) The maximum display height for the uncropped image. If larger, the image will be scaled down (for display), maintaining aspect ratio.
-* ServerSideResize=True|False (Defaults to False)- Enables server-side resizing of uncropped images. Greatly increases client-side performance.
-* JpegQuality=0..100 - Adjust the jpeg save quality. The default is 90, a very good balance with no visible artifacts.
-* ForcedImageFormat=jpg|png|gif -  If set, forces all images to be converted to the specified format instead of retaining their original format. 
+### npm
 
-## Getting the result
+```bash
+npm install @imazen/crop-image
+```
 
-There are several ways of getting the result. 
+```html
+<script type="module">
+  import '@imazen/crop-image';
+</script>
 
-1. Use the 'CroppedUrl' property. This property will return a URL to the dynamically cropped image. This is the preferred method, as it is non-destructive - however, http://imageresizing.net must be installed in Web.config.
-2. Use the 'Crop(saveAsPath)' method. This will save the cropped image to the given physical path.
-3. Access the X, Y, W, and H properties. 
+<crop-image src="/photo.jpg" aspect-ratio="16/9" name="crop"></crop-image>
+```
 
+### React
 
-## Crop rectangle values
+```bash
+npm install @imazen/crop-image-react
+```
 
-* X, Y, W,H, X2(readonly), Y2(readonly), - Gets or sets the crop coordinates for the image. Note that if ServerSideResize=True, these may be relative to CropXUnits and CropYUnits instead of the original image size. You CAN set X,Y,W, and H if you want to set the default selection.
-* (readonly) CropXUnits - The width of the image used when cropping, when ServerSideResize=True.
-* (readonly) CropYUnits - The height of the image used when cropping.
-* (readonly) CroppedUrl - If provides a URL to the dynamically cropped image (requires http://imageresizing.net/ to be installed)
+```tsx
+import { CropImage, useCrop } from '@imazen/crop-image-react';
 
+function App() {
+  const crop = useCrop();
+  return (
+    <CropImage
+      src="/photo.jpg"
+      aspectRatio="16/9"
+      onChange={crop.onChange}
+      onCommit={crop.onCommit}
+    />
+  );
+}
+```
 
-## External Preview Settings
+## Attributes
 
-* EnablePreview=True/False - When true, enables the preview window. You must also set the PreviewImageID value to the ID of a div or panel control.
-* PreviewImageId="PanelOrDivID" -  The ID of the preview div or panel (NOT img tag). The preview div doesn't need to have any content.
-* PreviewWidth=integer - The width of the preview
-* PreviewHeight=int - The Height of the preview
+| Attribute | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `src` | string | — | Image URL |
+| `mode` | `crop` \| `crop-pad` | `crop` | Crop-only or crop with padding |
+| `aspect-ratio` | string | free | e.g. `16/9`, `1:1`, `1.5` |
+| `aspect-ratios` | JSON | — | Menu of choices: `[{"w":16,"h":9,"label":"16:9"}]` |
+| `edge-snap` | number | `0.02` | Snap threshold (0..1) |
+| `even-padding` | boolean | false | Mirror padding on opposing sides |
+| `min-width` | number | — | Minimum crop width in pixels |
+| `min-height` | number | — | Minimum crop height in pixels |
+| `max-width` | number | — | Maximum crop width in pixels |
+| `max-height` | number | — | Maximum crop height in pixels |
+| `value` | JSON | — | Set selection as `CropSelection` JSON |
+| `name` | string | — | Form field name (enables form participation) |
+| `adapter` | string | `generic` | RIAPI adapter: `generic`, `imageflow`, `imageresizer` |
+| `disabled` | boolean | false | Disable interaction |
 
+## Events
 
-## Constraining the crop rectangle
+| Event | Detail | Description |
+|-------|--------|-------------|
+| `crop-change` | `{ selection, riapi }` | Fires continuously during drag |
+| `crop-commit` | `{ selection, riapi }` | Fires on drag end |
 
-* MaxSize=w,h - Maximum permitted crop size, in "w,h" format. See CanvasWidth and CanvasHeight for the maximum display size of the image being croppe
-* MinSize=w,h - Minimum permitted crop size in "w,h" format.
-* Ratio="16/9" or "1.3" - The aspect ratio to enforce on the cropping rectangle. Defaults to the original aspect ratio, but only enforced if FixedAspectRatio=true. May be a fraction like 16/9 or a decimal like 1.3
-* FixedAspectRatio=True|False - If true, the cropping rectangle will be forced to the original aspect ratio of the image (or 'Ratio', if set). Defaults to false. Not consulted if FixedAspectRatioCheckboxID is specified; the checkbox's value will be used instead.
-* FixedAspectRatioCheckboxID="Checkbox1" - The ID of a checkbox to change the FixedAspectRatio setting. If set, FixedAspectRatio is ignored; the checkbox's default value is used instead.
+## CSS Custom Properties
 
+```css
+crop-image {
+  --crop-handle-color: #fff;
+  --crop-overlay-color: rgba(0, 0, 0, 0.5);
+  --crop-border-color: rgba(255, 255, 255, 0.7);
+  --crop-guide-color: rgba(255, 255, 255, 0.3);
+  --crop-pad-color: rgba(80, 140, 220, 0.25);
+}
+```
 
-## Customizing the javascript includes
+## RIAPI Output
 
-* ScriptPath="~/scripts" - The path to the folder containing jquery, jcrop, and the jcrop css file. Defaults to ~/scripts/
-* DebugMode=True|False - When set, uses human-readable javascript instead of minified versions
-* IsInUpdatePanel=True|False - Set this to true if the control is within an update panel, so the scripts can be registered properly. Defaults to false.
-* JQueryInclude=None|Google|ScriptFolder|Embedded - (Defaults to Google CDN-hosted version, falling back to to embedded WebResource.axd method when internet connection or firewall problems interfere.)
-* JCropInclude=None|ScriptFolder|Embedded - Control how (or if) JCrop javascript is automatically refereced. Defaults to embedded WebResource.axd method.
-* JCropCssInclude=None|ScriptFolder|Embedded - Control how (or if) JCrop css is automatically refereced. Defaults to embedded WebResource.axd method.
-* WebCropInclude=None|ScriptFolder|Embedded - Control how (or if) webcropimage.js is automatically refereced. Defaults to embedded WebResource.axd method. 
+All coordinates are 0..1 fractions. The generic adapter outputs:
 
-       
-## How to use server-side resizing?
+```
+?crop=0.1,0.1,0.9,0.9&cropxunits=1&cropyunits=1
+```
 
-You'll need to make a web.config change - follow the instructions at http://imageresizing.net/
+The Imageflow adapter adds `&s.pad=T,R,B,L` for padding.
+The ImageResizer adapter adds `&margin=T,R,B,L` for padding.
 
-Then, set `ServerSizeResize`="true" on the control. 
+## Development
 
-This will make large images load MUCH faster when cropping, and use much less browser memory. Large images will crash mobile devices unless you are using server-side resizing.
-
-## How to force the cropping rectangle to preserve the aspect ratio of the original image?
-
-Set `FixedAspectRatio`="true". If you want to allow the user to control the setting, set `FixedAspectRatioCheckboxID` to the ID of a Checkbox control.
-
-If you want to set a specific aspect ratio instead of using the original, set `Ratio="16/9"`
+```bash
+pnpm install
+pnpm build        # Build all packages
+pnpm test         # Run tests
+pnpm dev          # Start demo at http://localhost:3100
+```

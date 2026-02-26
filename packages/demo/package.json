@@ -1,0 +1,17 @@
+{
+  "name": "@imazen/crop-image-demo",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build"
+  },
+  "dependencies": {
+    "@imazen/crop-image": "workspace:*",
+    "@imazen/crop-image-core": "workspace:*"
+  },
+  "devDependencies": {
+    "vite": "^6.0.0"
+  }
+}

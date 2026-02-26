@@ -1,0 +1,476 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>crop-image — Demo</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Instrument+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0e0f11;
+      --bg-raised: #16171b;
+      --bg-input: #1c1d22;
+      --border: #2a2b31;
+      --border-focus: #4a6fa5;
+      --text: #e2e4e9;
+      --text-dim: #7e818a;
+      --text-label: #9ca0ab;
+      --accent: #6b8fd4;
+      --accent-soft: rgba(107, 143, 212, 0.12);
+      --accent-glow: rgba(107, 143, 212, 0.06);
+      --green: #5a9e6f;
+      --mono: 'DM Mono', 'Menlo', monospace;
+      --sans: 'Instrument Sans', system-ui, sans-serif;
+      --radius: 6px;
+      --radius-lg: 10px;
+    }
+
+    html { font-size: 15px; }
+
+    body {
+      font-family: var(--sans);
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* Layout */
+    .page {
+      max-width: 1280px;
+      margin: 0 auto;
+      padding: 2.5rem 2rem 4rem;
+    }
+
+    header {
+      display: flex;
+      align-items: baseline;
+      gap: 1rem;
+      margin-bottom: 2.5rem;
+      padding-bottom: 1.5rem;
+      border-bottom: 1px solid var(--border);
+    }
+
+    header h1 {
+      font-size: 1.4rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      color: var(--text);
+    }
+
+    header h1 span {
+      color: var(--accent);
+      font-weight: 600;
+    }
+
+    header .version {
+      font-family: var(--mono);
+      font-size: 0.73rem;
+      color: var(--text-dim);
+      background: var(--bg-input);
+      padding: 0.2rem 0.55rem;
+      border-radius: 3px;
+      border: 1px solid var(--border);
+    }
+
+    .workspace {
+      display: grid;
+      grid-template-columns: 1fr 320px;
+      grid-template-rows: auto auto;
+      gap: 1.5rem;
+    }
+
+    /* Crop area */
+    .crop-panel {
+      grid-row: 1 / 3;
+      background: var(--bg-raised);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 1rem;
+      position: relative;
+    }
+
+    .crop-panel crop-image {
+      width: 100%;
+      border-radius: var(--radius);
+      overflow: hidden;
+    }
+
+    .crop-label {
+      position: absolute;
+      top: 0.6rem;
+      left: 0.8rem;
+      font-size: 0.67rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--text-dim);
+      z-index: 2;
+      background: var(--bg-raised);
+      padding: 0.15rem 0.45rem;
+      border-radius: 3px;
+    }
+
+    /* Controls panel */
+    .controls-panel {
+      background: var(--bg-raised);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 1.25rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1.25rem;
+    }
+
+    .panel-title {
+      font-size: 0.7rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--text-dim);
+      margin-bottom: 0.3rem;
+    }
+
+    .control-group {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+
+    .control-group label {
+      font-size: 0.8rem;
+      font-weight: 500;
+      color: var(--text-label);
+    }
+
+    /* Segmented control (aspect ratio) */
+    .segmented {
+      display: flex;
+      background: var(--bg-input);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+    }
+
+    .segmented button {
+      flex: 1;
+      padding: 0.45rem 0.3rem;
+      background: transparent;
+      border: none;
+      color: var(--text-dim);
+      font-family: var(--sans);
+      font-size: 0.78rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background 0.15s, color 0.15s;
+      position: relative;
+    }
+
+    .segmented button:not(:last-child)::after {
+      content: '';
+      position: absolute;
+      right: 0;
+      top: 20%;
+      height: 60%;
+      width: 1px;
+      background: var(--border);
+    }
+
+    .segmented button:hover { color: var(--text); }
+
+    .segmented button.active {
+      background: var(--accent-soft);
+      color: var(--accent);
+    }
+
+    .segmented button.active::after,
+    .segmented button.active + button::after {
+      background: transparent;
+    }
+
+    /* Toggle switch */
+    .toggle-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0.35rem 0;
+    }
+
+    .toggle-row span {
+      font-size: 0.8rem;
+      color: var(--text-label);
+    }
+
+    .toggle {
+      width: 36px;
+      height: 20px;
+      background: var(--bg-input);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      cursor: pointer;
+      position: relative;
+      transition: background 0.2s, border-color 0.2s;
+      flex-shrink: 0;
+    }
+
+    .toggle::after {
+      content: '';
+      position: absolute;
+      top: 2px;
+      left: 2px;
+      width: 14px;
+      height: 14px;
+      background: var(--text-dim);
+      border-radius: 50%;
+      transition: transform 0.2s, background 0.2s;
+    }
+
+    .toggle.on {
+      background: var(--accent-soft);
+      border-color: var(--accent);
+    }
+
+    .toggle.on::after {
+      transform: translateX(16px);
+      background: var(--accent);
+    }
+
+    /* Output panel */
+    .output-panel {
+      background: var(--bg-raised);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 1.25rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+
+    .output-block {
+      display: flex;
+      flex-direction: column;
+      gap: 0.35rem;
+    }
+
+    .output-block label {
+      font-size: 0.67rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--text-dim);
+    }
+
+    .output-block code {
+      font-family: var(--mono);
+      font-size: 0.78rem;
+      color: var(--accent);
+      background: var(--bg-input);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 0.55rem 0.7rem;
+      word-break: break-all;
+      line-height: 1.55;
+      white-space: pre-wrap;
+    }
+
+    .output-block .json-output {
+      max-height: 180px;
+      overflow-y: auto;
+      scrollbar-width: thin;
+      scrollbar-color: var(--border) transparent;
+    }
+
+    /* Status dot */
+    .status {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      font-size: 0.73rem;
+      color: var(--text-dim);
+      margin-top: auto;
+      padding-top: 0.75rem;
+      border-top: 1px solid var(--border);
+    }
+
+    .status-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--green);
+    }
+
+    /* Responsive */
+    @media (max-width: 860px) {
+      .workspace {
+        grid-template-columns: 1fr;
+        grid-template-rows: auto auto auto;
+      }
+      .crop-panel { grid-row: auto; }
+    }
+
+    /* Scrollbar for output */
+    .json-output::-webkit-scrollbar { width: 4px; }
+    .json-output::-webkit-scrollbar-track { background: transparent; }
+    .json-output::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+    /* Subtle load animation */
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .workspace > * {
+      animation: fadeUp 0.4s ease-out both;
+    }
+
+    .workspace > :nth-child(2) { animation-delay: 0.06s; }
+    .workspace > :nth-child(3) { animation-delay: 0.12s; }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <header>
+      <h1>&lt;<span>crop-image</span>&gt;</h1>
+      <span class="version">v0.1.0</span>
+    </header>
+
+    <div class="workspace">
+      <div class="crop-panel">
+        <div class="crop-label">Source</div>
+        <crop-image
+          id="cropper"
+          src="https://picsum.photos/1200/800"
+          mode="crop"
+          edge-snap="0.02"
+        ></crop-image>
+      </div>
+
+      <div class="controls-panel">
+        <div class="panel-title">Controls</div>
+
+        <div class="control-group">
+          <label>Aspect Ratio</label>
+          <div class="segmented" id="ratio-selector">
+            <button class="active" data-ratio="">Free</button>
+            <button data-ratio="1/1">1 : 1</button>
+            <button data-ratio="4/3">4 : 3</button>
+            <button data-ratio="16/9">16 : 9</button>
+          </div>
+        </div>
+
+        <div class="control-group">
+          <label>Mode</label>
+          <div class="segmented" id="mode-selector">
+            <button class="active" data-mode="crop">Crop</button>
+            <button data-mode="crop-pad">Crop + Pad</button>
+          </div>
+        </div>
+
+        <div class="control-group">
+          <div class="toggle-row">
+            <span>Edge Snap</span>
+            <div class="toggle on" id="edge-snap-toggle" role="switch" aria-checked="true" tabindex="0"></div>
+          </div>
+          <div class="toggle-row">
+            <span>Even Padding</span>
+            <div class="toggle" id="even-padding-toggle" role="switch" aria-checked="false" tabindex="0"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="output-panel">
+        <div class="panel-title">Output</div>
+
+        <div class="output-block">
+          <label>RIAPI Querystring</label>
+          <code id="qs-output">—</code>
+        </div>
+
+        <div class="output-block">
+          <label>Selection JSON</label>
+          <code class="json-output" id="json-output">—</code>
+        </div>
+
+        <div class="status">
+          <div class="status-dot"></div>
+          Listening for crop events
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script type="module">
+    import '@imazen/crop-image';
+
+    const cropper = document.getElementById('cropper');
+    const qsOutput = document.getElementById('qs-output');
+    const jsonOutput = document.getElementById('json-output');
+
+    // Aspect ratio selector
+    document.getElementById('ratio-selector').addEventListener('click', (e) => {
+      const btn = e.target.closest('button');
+      if (!btn) return;
+      btn.parentElement.querySelectorAll('button').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      const ratio = btn.dataset.ratio;
+      if (ratio) {
+        cropper.setAttribute('aspect-ratio', ratio);
+      } else {
+        cropper.removeAttribute('aspect-ratio');
+      }
+    });
+
+    // Mode selector
+    document.getElementById('mode-selector').addEventListener('click', (e) => {
+      const btn = e.target.closest('button');
+      if (!btn) return;
+      btn.parentElement.querySelectorAll('button').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      cropper.setAttribute('mode', btn.dataset.mode);
+    });
+
+    // Toggle helper
+    function setupToggle(id, onToggle) {
+      const el = document.getElementById(id);
+      const toggle = () => {
+        const isOn = el.classList.toggle('on');
+        el.setAttribute('aria-checked', String(isOn));
+        onToggle(isOn);
+      };
+      el.addEventListener('click', toggle);
+      el.addEventListener('keydown', (e) => {
+        if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); toggle(); }
+      });
+    }
+
+    setupToggle('edge-snap-toggle', (on) => {
+      cropper.setAttribute('edge-snap', on ? '0.02' : '0');
+    });
+
+    setupToggle('even-padding-toggle', (on) => {
+      if (on) cropper.setAttribute('even-padding', '');
+      else cropper.removeAttribute('even-padding');
+    });
+
+    // Output
+    function formatJson(obj) {
+      return JSON.stringify(obj, (_, v) => typeof v === 'number' ? Math.round(v * 10000) / 10000 : v, 2);
+    }
+
+    cropper.addEventListener('crop-change', (e) => {
+      const { selection, riapi } = e.detail;
+      qsOutput.textContent = riapi.querystring || '(none)';
+      jsonOutput.textContent = formatJson(selection);
+    });
+
+    cropper.addEventListener('crop-commit', (e) => {
+      const { riapi } = e.detail;
+      qsOutput.textContent = riapi.querystring || '(none)';
+    });
+  </script>
+</body>
+</html>
