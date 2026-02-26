@@ -1,7 +1,9 @@
-*.suo
+node_modules/
+dist/
+*.tsbuildinfo
+.vite/
+coverage/
 *.suo
 *.user
-*/obj/*
 ._*
 .DS*
-/Example/bin
