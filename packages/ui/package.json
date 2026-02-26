@@ -1,0 +1,27 @@
+{
+  "name": "@imazen/crop-image",
+  "version": "0.1.0",
+  "type": "module",
+  "main": "./dist/crop-image.cjs",
+  "module": "./dist/crop-image.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/crop-image.js",
+      "require": "./dist/crop-image.cjs",
+      "types": "./dist/index.d.ts"
+    },
+    "./crop-image.iife.js": "./dist/crop-image.iife.js"
+  },
+  "files": ["dist"],
+  "scripts": {
+    "build": "vite build"
+  },
+  "dependencies": {
+    "@imazen/crop-image-core": "workspace:*"
+  },
+  "devDependencies": {
+    "vite": "^6.0.0",
+    "vite-plugin-dts": "^4.0.0"
+  }
+}
