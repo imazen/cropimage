@@ -3,49 +3,13 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>crop-image — Demo</title>
+  <title>crop-image — Interactive Demo</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Instrument+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="./shared.css">
   <style>
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
-    :root {
-      --bg: #0e0f11;
-      --bg-raised: #16171b;
-      --bg-input: #1c1d22;
-      --border: #2a2b31;
-      --border-focus: #4a6fa5;
-      --text: #e2e4e9;
-      --text-dim: #7e818a;
-      --text-label: #9ca0ab;
-      --accent: #6b8fd4;
-      --accent-soft: rgba(107, 143, 212, 0.12);
-      --accent-glow: rgba(107, 143, 212, 0.06);
-      --green: #5a9e6f;
-      --mono: 'DM Mono', 'Menlo', monospace;
-      --sans: 'Instrument Sans', system-ui, sans-serif;
-      --radius: 6px;
-      --radius-lg: 10px;
-    }
-
-    html { font-size: 15px; }
-
-    body {
-      font-family: var(--sans);
-      background: var(--bg);
-      color: var(--text);
-      min-height: 100vh;
-      -webkit-font-smoothing: antialiased;
-    }
-
-    /* Layout */
-    .page {
-      max-width: 1280px;
-      margin: 0 auto;
-      padding: 2.5rem 2rem 4rem;
-    }
-
+    /* Demo-specific layout */
     header {
       display: flex;
       align-items: baseline;
@@ -332,6 +296,19 @@
   </style>
 </head>
 <body>
+  <nav class="site-nav">
+    <a class="logo" href="./">&lt;<span>crop-image</span>&gt;</a>
+    <div class="nav-links">
+      <a href="./" class="active">Demo</a>
+      <a href="./guide-vanilla.html">Vanilla JS</a>
+      <a href="./guide-react.html">React</a>
+      <a href="./guide-svelte.html">Svelte</a>
+      <a href="./guide-forms.html">Forms</a>
+      <a href="./guide-adapters.html">Adapters</a>
+      <a href="./api/">API Reference</a>
+    </div>
+  </nav>
+
   <div class="page">
     <header>
       <h1>&lt;<span>crop-image</span>&gt;</h1>

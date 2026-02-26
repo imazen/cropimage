@@ -1,0 +1,20 @@
+{
+  "$schema": "https://typedoc.org/schema.json",
+  "entryPointStrategy": "packages",
+  "entryPoints": [
+    "packages/core",
+    "packages/ui",
+    "packages/react",
+    "packages/svelte"
+  ],
+  "out": "packages/demo/dist/api",
+  "name": "crop-image",
+  "readme": "none",
+  "githubPages": false,
+  "navigation": {
+    "includeCategories": true,
+    "includeGroups": true
+  },
+  "categorizeByGroup": true,
+  "sort": ["source-order"]
+}

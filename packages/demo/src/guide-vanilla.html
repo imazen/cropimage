@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Vanilla JS Guide — crop-image</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Instrument+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="./shared.css">
+</head>
+<body>
+  <nav class="site-nav">
+    <a class="logo" href="./">&lt;<span>crop-image</span>&gt;</a>
+    <div class="nav-links">
+      <a href="./">Demo</a>
+      <a href="./guide-vanilla.html" class="active">Vanilla JS</a>
+      <a href="./guide-react.html">React</a>
+      <a href="./guide-svelte.html">Svelte</a>
+      <a href="./guide-forms.html">Forms</a>
+      <a href="./guide-adapters.html">Adapters</a>
+      <a href="./api/">API Reference</a>
+    </div>
+  </nav>
+
+  <div class="page">
+    <div class="docs-content">
+      <h1>Vanilla HTML &amp; JavaScript</h1>
+      <p class="subtitle">Use <code>&lt;crop-image&gt;</code> with zero framework dependencies.</p>
+
+      <h2>Installation</h2>
+
+      <h3>CDN / Script Tag</h3>
+      <p>Drop a single script tag and the element is ready to use. No build step required.</p>
+      <pre><code>&lt;script src="https://unpkg.com/@imazen/crop-image/dist/crop-image.iife.js"&gt;&lt;/script&gt;
+
+&lt;crop-image src="/photo.jpg"&gt;&lt;/crop-image&gt;</code></pre>
+
+      <h3>npm + ES Modules</h3>
+      <pre><code>npm install @imazen/crop-image</code></pre>
+      <pre><code>&lt;script type="module"&gt;
+  import '@imazen/crop-image';
+&lt;/script&gt;
+
+&lt;crop-image src="/photo.jpg"&gt;&lt;/crop-image&gt;</code></pre>
+
+      <h2>Attributes</h2>
+      <p>All configuration happens through HTML attributes. Changes are reflected immediately.</p>
+
+      <table>
+        <thead>
+          <tr><th>Attribute</th><th>Type</th><th>Default</th><th>Description</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><code>src</code></td><td>string</td><td>—</td><td>Image URL to crop</td></tr>
+          <tr><td><code>mode</code></td><td><code>crop</code> | <code>crop-pad</code></td><td><code>crop</code></td><td>Crop-only or crop with letterbox padding</td></tr>
+          <tr><td><code>aspect-ratio</code></td><td>string</td><td>free</td><td>Lock ratio: <code>16/9</code>, <code>1:1</code>, or <code>1.5</code></td></tr>
+          <tr><td><code>aspect-ratios</code></td><td>JSON</td><td>—</td><td>Menu of choices: <code>[{"w":16,"h":9,"label":"Wide"}]</code></td></tr>
+          <tr><td><code>edge-snap</code></td><td>number</td><td><code>0.02</code></td><td>Snap-to-edge threshold (0..1). Set to <code>0</code> to disable.</td></tr>
+          <tr><td><code>even-padding</code></td><td>boolean</td><td><code>false</code></td><td>Mirror padding on opposing sides (crop-pad mode only)</td></tr>
+          <tr><td><code>min-width</code></td><td>number</td><td>—</td><td>Minimum crop width in source pixels</td></tr>
+          <tr><td><code>min-height</code></td><td>number</td><td>—</td><td>Minimum crop height in source pixels</td></tr>
+          <tr><td><code>max-width</code></td><td>number</td><td>—</td><td>Maximum crop width in source pixels</td></tr>
+          <tr><td><code>max-height</code></td><td>number</td><td>—</td><td>Maximum crop height in source pixels</td></tr>
+          <tr><td><code>value</code></td><td>JSON</td><td>—</td><td>Set selection as <code>CropSelection</code> JSON</td></tr>
+          <tr><td><code>name</code></td><td>string</td><td>—</td><td>Form field name (enables form participation)</td></tr>
+          <tr><td><code>adapter</code></td><td>string</td><td><code>generic</code></td><td>RIAPI adapter: <code>generic</code>, <code>imageflow</code>, <code>imageresizer</code></td></tr>
+          <tr><td><code>disabled</code></td><td>boolean</td><td><code>false</code></td><td>Disable all interaction</td></tr>
+        </tbody>
+      </table>
+
+      <h2>Events</h2>
+      <p>The element fires two custom events. Both carry the same detail shape.</p>
+
+      <table>
+        <thead>
+          <tr><th>Event</th><th>When</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><code>crop-change</code></td><td>Continuously during drag (every pointer move)</td></tr>
+          <tr><td><code>crop-commit</code></td><td>Once when drag ends (pointer up)</td></tr>
+        </tbody>
+      </table>
+
+      <p>Both events bubble and are composed (cross Shadow DOM). The <code>detail</code> object contains:</p>
+      <pre><code>{
+  selection: {
+    crop: { x1, y1, x2, y2 },  // 0..1 fractions of source image
+    pad: { top, right, bottom, left }  // 0..1 fractions (crop-pad mode)
+  },
+  riapi: {
+    params: { crop: "...", cropxunits: "1", ... },
+    querystring: "?crop=0.1,0.1,0.9,0.9&cropxunits=1&cropyunits=1"
+  }
+}</code></pre>
+
+      <h2>Listening to Events</h2>
+      <pre><code>const cropper = document.querySelector('crop-image');
+
+cropper.addEventListener('crop-change', (e) => {
+  // Live updates during drag
+  console.log('Selection:', e.detail.selection);
+  console.log('RIAPI:', e.detail.riapi.querystring);
+});
+
+cropper.addEventListener('crop-commit', (e) => {
+  // Final value when user releases
+  const qs = e.detail.riapi.querystring;
+  document.getElementById('output').textContent = qs;
+});</code></pre>
+
+      <h2>Setting the Crop Programmatically</h2>
+      <p>Use the <code>selection</code> property to set the crop from JavaScript:</p>
+      <pre><code>const cropper = document.querySelector('crop-image');
+
+// Set a centered 50% crop
+cropper.selection = {
+  crop: { x1: 0.25, y1: 0.25, x2: 0.75, y2: 0.75 },
+  pad: { top: 0, right: 0, bottom: 0, left: 0 }
+};</code></pre>
+
+      <p>Or use the <code>value</code> attribute with JSON:</p>
+      <pre><code>&lt;crop-image
+  src="/photo.jpg"
+  value='{"crop":{"x1":0.1,"y1":0.1,"x2":0.9,"y2":0.9},"pad":{"top":0,"right":0,"bottom":0,"left":0}}'
+&gt;&lt;/crop-image&gt;</code></pre>
+
+      <h2>Reading Properties</h2>
+      <pre><code>const cropper = document.querySelector('crop-image');
+
+// Current selection (CropSelection object)
+const sel = cropper.selection;
+
+// RIAPI querystring for the current crop
+const qs = cropper.ripiQuerystring;
+
+// RIAPI params as an object
+const params = cropper.riapiParams;
+
+// Current config (read-only snapshot)
+const config = cropper.config;</code></pre>
+
+      <h2>Changing Attributes Dynamically</h2>
+      <pre><code>const cropper = document.querySelector('crop-image');
+
+// Lock to 16:9
+cropper.setAttribute('aspect-ratio', '16/9');
+
+// Switch to crop-pad mode
+cropper.setAttribute('mode', 'crop-pad');
+
+// Enable even padding
+cropper.setAttribute('even-padding', '');
+
+// Change image
+cropper.setAttribute('src', '/another-photo.jpg');
+
+// Use Imageflow adapter
+cropper.setAttribute('adapter', 'imageflow');</code></pre>
+
+      <h2>CSS Custom Properties</h2>
+      <p>Style the crop overlay through CSS custom properties on the element:</p>
+      <pre><code>crop-image {
+  --crop-handle-color: #fff;
+  --crop-handle-border: 1.5px solid rgba(0, 0, 0, 0.6);
+  --crop-overlay-color: rgba(0, 0, 0, 0.5);
+  --crop-border-color: rgba(255, 255, 255, 0.7);
+  --crop-border-width: 1px;
+  --crop-guide-color: rgba(255, 255, 255, 0.3);
+  --crop-guide-width: 0.5px;
+  --crop-pad-color: rgba(80, 140, 220, 0.25);
+  --crop-pad-stripe: rgba(80, 140, 220, 0.15);
+}</code></pre>
+
+      <h2>Keyboard Support</h2>
+      <p>Drag handles are focusable. Once focused, use arrow keys to nudge:</p>
+      <ul>
+        <li>Arrow keys move the handle by 1% of the image dimension</li>
+        <li>Shift + arrow moves by 5%</li>
+      </ul>
+
+      <h2>Complete Example</h2>
+      <pre><code>&lt;!DOCTYPE html&gt;
+&lt;html&gt;
+&lt;head&gt;
+  &lt;script src="https://unpkg.com/@imazen/crop-image/dist/crop-image.iife.js"&gt;&lt;/script&gt;
+  &lt;style&gt;
+    crop-image {
+      max-width: 600px;
+      --crop-overlay-color: rgba(0, 0, 0, 0.6);
+    }
+  &lt;/style&gt;
+&lt;/head&gt;
+&lt;body&gt;
+  &lt;crop-image
+    src="/photo.jpg"
+    aspect-ratio="16/9"
+    mode="crop"
+    edge-snap="0.02"
+  &gt;&lt;/crop-image&gt;
+
+  &lt;p&gt;Querystring: &lt;code id="output"&gt;&lt;/code&gt;&lt;/p&gt;
+
+  &lt;script&gt;
+    document.querySelector('crop-image')
+      .addEventListener('crop-commit', (e) =&gt; {
+        document.getElementById('output').textContent =
+          e.detail.riapi.querystring;
+      });
+  &lt;/script&gt;
+&lt;/body&gt;
+&lt;/html&gt;</code></pre>
+    </div>
+  </div>
+
+  <footer class="site-footer">
+    <span>crop-image — <a href="https://github.com/lilith/cropimage">GitHub</a></span>
+    <a href="./api/">Full API Reference</a>
+  </footer>
+</body>
+</html>

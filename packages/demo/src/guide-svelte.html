@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Svelte Guide — crop-image</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Instrument+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="./shared.css">
+</head>
+<body>
+  <nav class="site-nav">
+    <a class="logo" href="./">&lt;<span>crop-image</span>&gt;</a>
+    <div class="nav-links">
+      <a href="./">Demo</a>
+      <a href="./guide-vanilla.html">Vanilla JS</a>
+      <a href="./guide-react.html">React</a>
+      <a href="./guide-svelte.html" class="active">Svelte</a>
+      <a href="./guide-forms.html">Forms</a>
+      <a href="./guide-adapters.html">Adapters</a>
+      <a href="./api/">API Reference</a>
+    </div>
+  </nav>
+
+  <div class="page">
+    <div class="docs-content">
+      <h1>Svelte</h1>
+      <p class="subtitle">Svelte action and helpers for <code>&lt;crop-image&gt;</code>. Works with Svelte 4+ and 5.</p>
+
+      <h2>Installation</h2>
+      <pre><code>npm install @imazen/crop-image-svelte</code></pre>
+      <p>Peer dependency: <code>svelte &gt;= 4</code>.</p>
+
+      <h2>Basic Usage</h2>
+      <p>The <code>cropImage</code> action registers the web component and sets up the element:</p>
+      <pre><code>&lt;script&gt;
+  import { cropImage } from '@imazen/crop-image-svelte';
+
+  let querystring = '';
+
+  function handleCommit(e) {
+    querystring = e.detail.riapi.querystring;
+  }
+&lt;/script&gt;
+
+&lt;crop-image
+  use:cropImage
+  src="/photo.jpg"
+  aspect-ratio="16/9"
+  on:crop-commit={handleCommit}
+/&gt;
+
+&lt;p&gt;Querystring: {querystring}&lt;/p&gt;</code></pre>
+
+      <h2>Action: <code>cropImage</code></h2>
+      <p>The <code>use:cropImage</code> action handles the web component registration. Apply it to any <code>&lt;crop-image&gt;</code> element. The action has no parameters and no cleanup needed — the web component manages its own lifecycle.</p>
+
+      <h2>Helper Functions</h2>
+
+      <h3><code>setCropSelection(element, selection)</code></h3>
+      <p>Imperatively set the crop selection on an element:</p>
+      <pre><code>&lt;script&gt;
+  import { cropImage, setCropSelection } from '@imazen/crop-image-svelte';
+
+  let el;
+
+  function resetToCenter() {
+    setCropSelection(el, {
+      crop: { x1: 0.25, y1: 0.25, x2: 0.75, y2: 0.75 },
+      pad: { top: 0, right: 0, bottom: 0, left: 0 }
+    });
+  }
+&lt;/script&gt;
+
+&lt;crop-image bind:this={el} use:cropImage src="/photo.jpg" /&gt;
+&lt;button on:click={resetToCenter}&gt;Center Crop&lt;/button&gt;</code></pre>
+
+      <h3><code>getCropSelection(element)</code></h3>
+      <p>Read the current selection from the element:</p>
+      <pre><code>&lt;script&gt;
+  import { cropImage, getCropSelection } from '@imazen/crop-image-svelte';
+
+  let el;
+
+  function logCrop() {
+    const sel = getCropSelection(el);
+    console.log(sel?.crop);
+  }
+&lt;/script&gt;
+
+&lt;crop-image bind:this={el} use:cropImage src="/photo.jpg" /&gt;
+&lt;button on:click={logCrop}&gt;Log Crop&lt;/button&gt;</code></pre>
+
+      <h2>Event Handling</h2>
+      <p>Both <code>crop-change</code> and <code>crop-commit</code> are standard DOM custom events. Use Svelte's <code>on:</code> directive:</p>
+      <pre><code>&lt;script&gt;
+  import { cropImage } from '@imazen/crop-image-svelte';
+
+  let selection = null;
+  let querystring = '';
+
+  function handleChange(e) {
+    selection = e.detail.selection;
+  }
+
+  function handleCommit(e) {
+    querystring = e.detail.riapi.querystring;
+  }
+&lt;/script&gt;
+
+&lt;crop-image
+  use:cropImage
+  src="/photo.jpg"
+  on:crop-change={handleChange}
+  on:crop-commit={handleCommit}
+/&gt;
+
+{#if selection}
+  &lt;p&gt;Crop: ({selection.crop.x1}, {selection.crop.y1}) to ({selection.crop.x2}, {selection.crop.y2})&lt;/p&gt;
+{/if}
+&lt;p&gt;RIAPI: {querystring}&lt;/p&gt;</code></pre>
+
+      <h2>Reactive Attributes</h2>
+      <p>Bind Svelte reactive variables to attributes:</p>
+      <pre><code>&lt;script&gt;
+  import { cropImage } from '@imazen/crop-image-svelte';
+
+  let mode = 'crop';
+  let ratio = '16/9';
+&lt;/script&gt;
+
+&lt;crop-image
+  use:cropImage
+  src="/photo.jpg"
+  mode={mode}
+  aspect-ratio={ratio}
+/&gt;
+
+&lt;select bind:value={mode}&gt;
+  &lt;option value="crop"&gt;Crop&lt;/option&gt;
+  &lt;option value="crop-pad"&gt;Crop + Pad&lt;/option&gt;
+&lt;/select&gt;
+
+&lt;select bind:value={ratio}&gt;
+  &lt;option value=""&gt;Free&lt;/option&gt;
+  &lt;option value="1/1"&gt;1:1&lt;/option&gt;
+  &lt;option value="4/3"&gt;4:3&lt;/option&gt;
+  &lt;option value="16/9"&gt;16:9&lt;/option&gt;
+&lt;/select&gt;</code></pre>
+
+      <h2>TypeScript</h2>
+      <p>Type exports for Svelte components:</p>
+      <pre><code>import type {
+  CropImageProps,
+  CropImageEvents,
+  CropRect,
+  PadRect,
+  CropSelection,
+  AspectRatio,
+  CropConfig,
+} from '@imazen/crop-image-svelte';</code></pre>
+
+      <p>The <code>CropImageEvents</code> interface types the custom events:</p>
+      <pre><code>interface CropImageEvents {
+  'crop-change': CustomEvent&lt;{
+    selection: CropSelection;
+    riapi: { params: Record&lt;string, string&gt;; querystring: string };
+  }&gt;;
+  'crop-commit': CustomEvent&lt;{
+    selection: CropSelection;
+    riapi: { params: Record&lt;string, string&gt;; querystring: string };
+  }&gt;;
+}</code></pre>
+
+      <h2>Complete Example</h2>
+      <pre><code>&lt;script lang="ts"&gt;
+  import { cropImage, getCropSelection, type CropSelection } from '@imazen/crop-image-svelte';
+
+  export let imageUrl: string;
+
+  let querystring = '';
+  let selection: CropSelection | undefined;
+  let cropEl: HTMLElement;
+
+  function handleCommit(e: CustomEvent) {
+    querystring = e.detail.riapi.querystring;
+    selection = e.detail.selection;
+  }
+
+  async function save() {
+    const res = await fetch(`/api/resize?src=${imageUrl}${querystring}`);
+    // handle result
+  }
+&lt;/script&gt;
+
+&lt;crop-image
+  bind:this={cropEl}
+  use:cropImage
+  src={imageUrl}
+  aspect-ratio="4/3"
+  adapter="imageflow"
+  on:crop-commit={handleCommit}
+  style="max-width: 600px;"
+/&gt;
+
+&lt;pre&gt;{querystring}&lt;/pre&gt;
+&lt;button on:click={save}&gt;Save&lt;/button&gt;</code></pre>
+    </div>
+  </div>
+
+  <footer class="site-footer">
+    <span>crop-image — <a href="https://github.com/lilith/cropimage">GitHub</a></span>
+    <a href="./api/">Full API Reference</a>
+  </footer>
+</body>
+</html>

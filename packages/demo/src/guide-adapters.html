@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>RIAPI Adapters Guide — crop-image</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Instrument+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="./shared.css">
+</head>
+<body>
+  <nav class="site-nav">
+    <a class="logo" href="./">&lt;<span>crop-image</span>&gt;</a>
+    <div class="nav-links">
+      <a href="./">Demo</a>
+      <a href="./guide-vanilla.html">Vanilla JS</a>
+      <a href="./guide-react.html">React</a>
+      <a href="./guide-svelte.html">Svelte</a>
+      <a href="./guide-forms.html">Forms</a>
+      <a href="./guide-adapters.html" class="active">Adapters</a>
+      <a href="./api/">API Reference</a>
+    </div>
+  </nav>
+
+  <div class="page">
+    <div class="docs-content">
+      <h1>RIAPI Adapters</h1>
+      <p class="subtitle">Convert crop selections to server-compatible querystrings. Three built-in adapters cover all <a href="https://riapi.org/">RIAPI</a>-compliant servers.</p>
+
+      <h2>What is RIAPI?</h2>
+      <p>RIAPI (RESTful Image API) is a querystring-based convention for image manipulation. Instead of uploading a modified image, you describe the transformation as URL parameters and the server applies them on-the-fly. The <code>crop</code> parameter specifies a rectangle; <code>cropxunits</code> and <code>cropyunits</code> define the coordinate system.</p>
+
+      <h2>Choosing an Adapter</h2>
+      <p>Set the <code>adapter</code> attribute on the element. This controls how the crop selection is serialized to a querystring.</p>
+
+      <table>
+        <thead>
+          <tr><th>Adapter</th><th>Server</th><th>Padding Parameter</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><code>generic</code></td><td>Any RIAPI server</td><td>(none)</td></tr>
+          <tr><td><code>imageflow</code></td><td>Imageflow Server</td><td><code>s.pad=T,R,B,L</code> (source pixels)</td></tr>
+          <tr><td><code>imageresizer</code></td><td>ImageResizer (v3/v4/v5)</td><td><code>margin=T,R,B,L</code> (source pixels)</td></tr>
+        </tbody>
+      </table>
+
+      <pre><code>&lt;!-- Generic (default) --&gt;
+&lt;crop-image src="/photo.jpg"&gt;&lt;/crop-image&gt;
+
+&lt;!-- Imageflow --&gt;
+&lt;crop-image src="/photo.jpg" adapter="imageflow"&gt;&lt;/crop-image&gt;
+
+&lt;!-- ImageResizer --&gt;
+&lt;crop-image src="/photo.jpg" adapter="imageresizer"&gt;&lt;/crop-image&gt;</code></pre>
+
+      <h2>Output Format</h2>
+
+      <h3>Generic Adapter</h3>
+      <p>All adapters use fractional units (<code>cropxunits=1</code>, <code>cropyunits=1</code>), so crop coordinates map directly to 0..1 fractions of the source image.</p>
+      <pre><code>?crop=0.1,0.15,0.9,0.85&cropxunits=1&cropyunits=1</code></pre>
+      <p>The generic adapter does not output padding parameters. Use it when your server doesn't support letterboxing, or when you're handling padding separately.</p>
+
+      <h3>Imageflow Adapter</h3>
+      <p>Same crop format, plus <code>s.pad</code> for letterbox padding in source pixels:</p>
+      <pre><code>?crop=0,0.1,1,0.9&cropxunits=1&cropyunits=1&s.pad=50,0,50,0</code></pre>
+      <p>Padding values are <code>Math.round(fraction * sourceDimension)</code>. For a 1000x800 image with 5% top padding: <code>0.05 * 800 = 40px</code>.</p>
+
+      <h3>ImageResizer Adapter</h3>
+      <p>Same as Imageflow but uses <code>margin</code> instead of <code>s.pad</code>:</p>
+      <pre><code>?crop=0,0.1,1,0.9&cropxunits=1&cropyunits=1&margin=50,0,50,0</code></pre>
+
+      <h2>Bidirectional Conversion</h2>
+      <p>All adapters support both directions: selection-to-querystring and querystring-to-selection. This is useful for restoring a previously saved crop.</p>
+
+      <h3>Using the Core Library Directly</h3>
+      <pre><code>import {
+  GenericRiapiAdapter,
+  ImageflowAdapter,
+  ImageResizerAdapter,
+  parseQuerystring,
+} from '@imazen/crop-image-core';
+
+// Selection → querystring
+const adapter = new ImageflowAdapter();
+const result = adapter.toParams(selection, sourceWidth, sourceHeight);
+console.log(result.querystring);
+// "?crop=0.1,0.1,0.9,0.9&cropxunits=1&cropyunits=1"
+
+// Querystring → selection
+const params = parseQuerystring('?crop=0.1,0.1,0.9,0.9&cropxunits=1&cropyunits=1');
+const restored = adapter.fromParams(params, sourceWidth, sourceHeight);
+// { crop: { x1: 0.1, y1: 0.1, x2: 0.9, y2: 0.9 }, pad: { top: 0, ... } }</code></pre>
+
+      <h2>The <code>RiapiAdapter</code> Interface</h2>
+      <p>All adapters implement this interface from <code>@imazen/crop-image-core</code>:</p>
+      <pre><code>interface RiapiResult {
+  params: Record&lt;string, string&gt;;
+  querystring: string;
+}
+
+interface RiapiAdapter {
+  toParams(sel: CropSelection, srcW: number, srcH: number): RiapiResult;
+  fromParams(params: Record&lt;string, string&gt;, srcW: number, srcH: number): CropSelection | null;
+}</code></pre>
+
+      <h2>Custom Adapters</h2>
+      <p>You can implement the <code>RiapiAdapter</code> interface for your own server's querystring format. The web component doesn't natively support custom adapter instances through attributes, but you can use the core library directly:</p>
+
+      <pre><code>import { type RiapiAdapter, type RiapiResult, type CropSelection } from '@imazen/crop-image-core';
+
+class MyServerAdapter implements RiapiAdapter {
+  toParams(sel: CropSelection, srcW: number, srcH: number): RiapiResult {
+    const { x1, y1, x2, y2 } = sel.crop;
+    const params: Record&lt;string, string&gt; = {
+      'rect': `${Math.round(x1 * srcW)},${Math.round(y1 * srcH)},` +
+              `${Math.round((x2 - x1) * srcW)},${Math.round((y2 - y1) * srcH)}`,
+    };
+    const querystring = '?' + Object.entries(params)
+      .map(([k, v]) =&gt; `${k}=${v}`).join('&');
+    return { params, querystring };
+  }
+
+  fromParams(params: Record&lt;string, string&gt;, srcW: number, srcH: number): CropSelection | null {
+    // Parse your format back to CropSelection
+    return null;
+  }
+}
+
+// Use with the web component via events
+const adapter = new MyServerAdapter();
+const cropper = document.querySelector('crop-image');
+
+cropper.addEventListener('crop-commit', (e) =&gt; {
+  const sel = e.detail.selection;
+  const result = adapter.toParams(sel, sourceWidth, sourceHeight);
+  console.log(result.querystring);
+});</code></pre>
+
+      <h2>Utility Functions</h2>
+      <p>The core package exports helpers for working with querystrings:</p>
+      <pre><code>import { buildQuerystring, parseQuerystring } from '@imazen/crop-image-core';
+
+// Build from key-value pairs
+const qs = buildQuerystring({ crop: '0.1,0.1,0.9,0.9', cropxunits: '1', cropyunits: '1' });
+// "?crop=0.1%2C0.1%2C0.9%2C0.9&cropxunits=1&cropyunits=1"
+
+// Parse back to object
+const params = parseQuerystring(qs);
+// { crop: "0.1,0.1,0.9,0.9", cropxunits: "1", cropyunits: "1" }</code></pre>
+
+      <h2>Coordinate System</h2>
+      <p>All adapters use the same coordinate system internally:</p>
+      <ul>
+        <li><strong>Crop coordinates</strong> are 0..1 fractions of the source image. <code>(0, 0)</code> is top-left, <code>(1, 1)</code> is bottom-right.</li>
+        <li><strong>Padding</strong> is also 0..1 fractions. A <code>pad.top</code> of <code>0.1</code> means 10% of the source height added above the crop.</li>
+        <li>The <code>cropxunits=1</code> and <code>cropyunits=1</code> parameters tell RIAPI servers that coordinates are fractional (not pixels).</li>
+      </ul>
+
+      <div class="note">
+        <p><strong>Padding is only generated in <code>crop-pad</code> mode.</strong> In standard <code>crop</code> mode, the crop is constrained to 0..1 bounds and padding is always zero. Switch to <code>mode="crop-pad"</code> to allow the selection to extend beyond the image edges.</p>
+      </div>
+    </div>
+  </div>
+
+  <footer class="site-footer">
+    <span>crop-image — <a href="https://github.com/lilith/cropimage">GitHub</a></span>
+    <a href="./api/">Full API Reference</a>
+  </footer>
+</body>
+</html>

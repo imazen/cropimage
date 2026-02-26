@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Form Integration Guide — crop-image</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Instrument+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="./shared.css">
+</head>
+<body>
+  <nav class="site-nav">
+    <a class="logo" href="./">&lt;<span>crop-image</span>&gt;</a>
+    <div class="nav-links">
+      <a href="./">Demo</a>
+      <a href="./guide-vanilla.html">Vanilla JS</a>
+      <a href="./guide-react.html">React</a>
+      <a href="./guide-svelte.html">Svelte</a>
+      <a href="./guide-forms.html" class="active">Forms</a>
+      <a href="./guide-adapters.html">Adapters</a>
+      <a href="./api/">API Reference</a>
+    </div>
+  </nav>
+
+  <div class="page">
+    <div class="docs-content">
+      <h1>Form Integration</h1>
+      <p class="subtitle">Submit crop data with standard HTML forms using <code>ElementInternals</code>.</p>
+
+      <h2>How It Works</h2>
+      <p><code>&lt;crop-image&gt;</code> is a <a href="https://developer.mozilla.org/en-US/docs/Web/API/ElementInternals">form-associated custom element</a>. When you set the <code>name</code> attribute, it participates in form submission just like a native <code>&lt;input&gt;</code>.</p>
+      <p>The form value is automatically set to the RIAPI querystring of the current crop selection. It updates on every <code>crop-change</code> and <code>crop-commit</code> event.</p>
+
+      <h2>Basic Form Submission</h2>
+      <pre><code>&lt;form action="/api/upload" method="POST" enctype="multipart/form-data"&gt;
+  &lt;input type="file" name="image" accept="image/*"&gt;
+
+  &lt;crop-image
+    name="crop"
+    src="/preview.jpg"
+    aspect-ratio="16/9"
+    adapter="imageflow"
+  &gt;&lt;/crop-image&gt;
+
+  &lt;button type="submit"&gt;Upload &amp; Crop&lt;/button&gt;
+&lt;/form&gt;</code></pre>
+
+      <p>When submitted, the form data includes:</p>
+      <pre><code>image: [file data]
+crop: ?crop=0.1,0.1,0.9,0.9&cropxunits=1&cropyunits=1</code></pre>
+
+      <h2>Reading Form Data in JavaScript</h2>
+      <pre><code>const form = document.querySelector('form');
+
+form.addEventListener('submit', (e) =&gt; {
+  e.preventDefault();
+  const data = new FormData(form);
+  const cropQs = data.get('crop');
+  console.log(cropQs);
+  // "?crop=0.1,0.1,0.9,0.9&cropxunits=1&cropyunits=1"
+});</code></pre>
+
+      <h2>Form Properties</h2>
+      <p>The element exposes standard form-associated properties:</p>
+      <table>
+        <thead>
+          <tr><th>Property</th><th>Type</th><th>Description</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><code>.form</code></td><td><code>HTMLFormElement | null</code></td><td>The containing form element</td></tr>
+          <tr><td><code>.name</code></td><td><code>string | null</code></td><td>The form field name (from the <code>name</code> attribute)</td></tr>
+          <tr><td><code>.type</code></td><td><code>'crop-image'</code></td><td>The element's form type identifier</td></tr>
+          <tr><td><code>.validity</code></td><td><code>ValidityState</code></td><td>Validity state (always valid)</td></tr>
+          <tr><td><code>.validationMessage</code></td><td><code>string</code></td><td>Validation message (always empty)</td></tr>
+        </tbody>
+      </table>
+
+      <h2>Hidden Input Alternative</h2>
+      <p>If you prefer a hidden input (for broader browser support or framework compatibility), mirror the querystring manually:</p>
+      <pre><code>&lt;form action="/api/crop" method="POST"&gt;
+  &lt;input type="hidden" name="crop" id="crop-input"&gt;
+
+  &lt;crop-image
+    src="/photo.jpg"
+    adapter="imageflow"
+  &gt;&lt;/crop-image&gt;
+
+  &lt;button type="submit"&gt;Save&lt;/button&gt;
+&lt;/form&gt;
+
+&lt;script type="module"&gt;
+  import '@imazen/crop-image';
+
+  const cropper = document.querySelector('crop-image');
+  const input = document.getElementById('crop-input');
+
+  cropper.addEventListener('crop-commit', (e) =&gt; {
+    input.value = e.detail.riapi.querystring;
+  });
+&lt;/script&gt;</code></pre>
+
+      <h2>Multiple Crop Fields</h2>
+      <p>Use different <code>name</code> attributes for multiple crop elements in one form:</p>
+      <pre><code>&lt;form&gt;
+  &lt;crop-image name="thumbnail" src="/photo.jpg" aspect-ratio="1/1"&gt;&lt;/crop-image&gt;
+  &lt;crop-image name="banner" src="/photo.jpg" aspect-ratio="16/9"&gt;&lt;/crop-image&gt;
+  &lt;button type="submit"&gt;Save Crops&lt;/button&gt;
+&lt;/form&gt;</code></pre>
+
+      <p>Form data will include both:</p>
+      <pre><code>thumbnail: ?crop=0.2,0.1,0.8,0.7&cropxunits=1&cropyunits=1
+banner: ?crop=0.0,0.2,1.0,0.8&cropxunits=1&cropyunits=1</code></pre>
+
+      <h2>Server-Side Usage</h2>
+      <p>The RIAPI querystring format is natively understood by:</p>
+      <ul>
+        <li><strong>Imageflow Server</strong> — append directly to the image URL</li>
+        <li><strong>ImageResizer</strong> — same querystring format</li>
+        <li><strong>Any RIAPI-compliant server</strong> — the <code>crop</code>, <code>cropxunits</code>, <code>cropyunits</code> parameters are standard</li>
+      </ul>
+      <p>For the generic adapter, the crop coordinates are 0..1 fractions. To convert to pixels server-side, multiply by the source image dimensions:</p>
+      <pre><code># Python example
+crop_str = request.form['crop']  # "0.1,0.2,0.9,0.8"
+x1, y1, x2, y2 = [float(v) for v in crop_str.split(',')]
+
+pixel_x1 = int(x1 * source_width)
+pixel_y1 = int(y1 * source_height)
+pixel_x2 = int(x2 * source_width)
+pixel_y2 = int(y2 * source_height)</code></pre>
+
+      <div class="note">
+        <p><strong>Browser support:</strong> <code>ElementInternals</code> and form-associated custom elements are supported in all modern browsers (Chrome 77+, Firefox 98+, Safari 16.4+). For older browsers, use the hidden input approach.</p>
+      </div>
+    </div>
+  </div>
+
+  <footer class="site-footer">
+    <span>crop-image — <a href="https://github.com/lilith/cropimage">GitHub</a></span>
+    <a href="./api/">Full API Reference</a>
+  </footer>
+</body>
+</html>

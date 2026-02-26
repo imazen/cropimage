@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>React Guide — crop-image</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Instrument+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="./shared.css">
+</head>
+<body>
+  <nav class="site-nav">
+    <a class="logo" href="./">&lt;<span>crop-image</span>&gt;</a>
+    <div class="nav-links">
+      <a href="./">Demo</a>
+      <a href="./guide-vanilla.html">Vanilla JS</a>
+      <a href="./guide-react.html" class="active">React</a>
+      <a href="./guide-svelte.html">Svelte</a>
+      <a href="./guide-forms.html">Forms</a>
+      <a href="./guide-adapters.html">Adapters</a>
+      <a href="./api/">API Reference</a>
+    </div>
+  </nav>
+
+  <div class="page">
+    <div class="docs-content">
+      <h1>React</h1>
+      <p class="subtitle">First-class React wrapper with <code>useCrop</code> hook for state management.</p>
+
+      <h2>Installation</h2>
+      <pre><code>npm install @imazen/crop-image-react</code></pre>
+      <p>Peer dependencies: <code>react &gt;= 18</code>, <code>react-dom &gt;= 18</code>. The web component is auto-registered on import.</p>
+
+      <h2>Basic Usage</h2>
+      <pre><code>import { CropImage } from '@imazen/crop-image-react';
+
+function App() {
+  return (
+    &lt;CropImage
+      src="/photo.jpg"
+      aspectRatio="16/9"
+      onChange={(detail) =&gt; console.log(detail.selection)}
+      onCommit={(detail) =&gt; console.log(detail.riapi.querystring)}
+    /&gt;
+  );
+}</code></pre>
+
+      <h2>The <code>useCrop</code> Hook</h2>
+      <p>For controlled state management, <code>useCrop</code> tracks the current selection, committed RIAPI querystring, and provides a reset function.</p>
+      <pre><code>import { CropImage, useCrop } from '@imazen/crop-image-react';
+
+function CropEditor() {
+  const crop = useCrop();
+
+  return (
+    &lt;div&gt;
+      &lt;CropImage
+        src="/photo.jpg"
+        aspectRatio="16/9"
+        onChange={crop.onChange}
+        onCommit={crop.onCommit}
+      /&gt;
+
+      &lt;p&gt;Querystring: {crop.querystring}&lt;/p&gt;
+      &lt;button onClick={crop.reset}&gt;Reset&lt;/button&gt;
+    &lt;/div&gt;
+  );
+}</code></pre>
+
+      <h3><code>useCrop</code> Options</h3>
+      <table>
+        <thead>
+          <tr><th>Option</th><th>Type</th><th>Description</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><code>initialSelection</code></td><td><code>CropSelection</code></td><td>Starting crop state. Defaults to 10% inset on all sides.</td></tr>
+        </tbody>
+      </table>
+
+      <h3><code>useCrop</code> Return Value</h3>
+      <table>
+        <thead>
+          <tr><th>Property</th><th>Type</th><th>Description</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><code>selection</code></td><td><code>CropSelection</code></td><td>Current crop + pad state</td></tr>
+          <tr><td><code>onChange</code></td><td><code>(detail) =&gt; void</code></td><td>Pass to <code>&lt;CropImage onChange&gt;</code></td></tr>
+          <tr><td><code>onCommit</code></td><td><code>(detail) =&gt; void</code></td><td>Pass to <code>&lt;CropImage onCommit&gt;</code></td></tr>
+          <tr><td><code>setSelection</code></td><td><code>(sel) =&gt; void</code></td><td>Manually update the selection</td></tr>
+          <tr><td><code>reset</code></td><td><code>() =&gt; void</code></td><td>Reset to initial selection</td></tr>
+          <tr><td><code>querystring</code></td><td><code>string</code></td><td>Last committed RIAPI querystring</td></tr>
+          <tr><td><code>params</code></td><td><code>Record&lt;string, string&gt;</code></td><td>Last committed RIAPI params object</td></tr>
+        </tbody>
+      </table>
+
+      <h2>CropImage Props</h2>
+      <p>The wrapper accepts all web component attributes as camelCase props, plus callback props.</p>
+
+      <table>
+        <thead>
+          <tr><th>Prop</th><th>Type</th><th>Description</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><code>src</code></td><td><code>string</code></td><td>Image URL (required)</td></tr>
+          <tr><td><code>mode</code></td><td><code>'crop' | 'crop-pad'</code></td><td>Crop mode</td></tr>
+          <tr><td><code>aspectRatio</code></td><td><code>string</code></td><td>Aspect ratio constraint</td></tr>
+          <tr><td><code>aspectRatios</code></td><td><code>Array&lt;{w, h, label?}&gt;</code></td><td>Array of ratio choices</td></tr>
+          <tr><td><code>edgeSnap</code></td><td><code>number</code></td><td>Edge snap threshold (0..1)</td></tr>
+          <tr><td><code>evenPadding</code></td><td><code>boolean</code></td><td>Mirror padding on opposing sides</td></tr>
+          <tr><td><code>minWidth</code></td><td><code>number</code></td><td>Min crop width (source px)</td></tr>
+          <tr><td><code>minHeight</code></td><td><code>number</code></td><td>Min crop height (source px)</td></tr>
+          <tr><td><code>maxWidth</code></td><td><code>number</code></td><td>Max crop width (source px)</td></tr>
+          <tr><td><code>maxHeight</code></td><td><code>number</code></td><td>Max crop height (source px)</td></tr>
+          <tr><td><code>value</code></td><td><code>CropSelection</code></td><td>Controlled selection value</td></tr>
+          <tr><td><code>name</code></td><td><code>string</code></td><td>Form field name</td></tr>
+          <tr><td><code>adapter</code></td><td><code>string</code></td><td>RIAPI adapter name</td></tr>
+          <tr><td><code>disabled</code></td><td><code>boolean</code></td><td>Disable interaction</td></tr>
+          <tr><td><code>onChange</code></td><td><code>(detail) =&gt; void</code></td><td>Called on every drag move</td></tr>
+          <tr><td><code>onCommit</code></td><td><code>(detail) =&gt; void</code></td><td>Called when drag ends</td></tr>
+        </tbody>
+      </table>
+
+      <h2>Ref Access</h2>
+      <p>Use a ref to access the underlying DOM element and its <code>selection</code> property:</p>
+      <pre><code>import { useRef } from 'react';
+import { CropImage, type CropImageRef } from '@imazen/crop-image-react';
+
+function App() {
+  const ref = useRef&lt;CropImageRef&gt;(null);
+
+  const logSelection = () =&gt; {
+    console.log(ref.current?.selection);
+    console.log(ref.current?.element);
+  };
+
+  return (
+    &lt;&gt;
+      &lt;CropImage ref={ref} src="/photo.jpg" /&gt;
+      &lt;button onClick={logSelection}&gt;Log Selection&lt;/button&gt;
+    &lt;/&gt;
+  );
+}</code></pre>
+
+      <h2>TypeScript</h2>
+      <p>All types are exported from the package:</p>
+      <pre><code>import type {
+  CropImageProps,
+  CropImageRef,
+  CropChangeDetail,
+  CropRect,
+  PadRect,
+  CropSelection,
+  AspectRatio,
+  CropConfig,
+} from '@imazen/crop-image-react';</code></pre>
+
+      <h2>Complete Example</h2>
+      <pre><code>import { CropImage, useCrop } from '@imazen/crop-image-react';
+import type { CropSelection } from '@imazen/crop-image-react';
+
+function PhotoCropper({ imageUrl }: { imageUrl: string }) {
+  const crop = useCrop();
+
+  const handleSave = () =&gt; {
+    // Send the RIAPI querystring to your image server
+    fetch(`/api/resize?src=${imageUrl}${crop.querystring}`)
+      .then(res =&gt; res.blob())
+      .then(blob =&gt; {
+        // Use the cropped image
+      });
+  };
+
+  return (
+    &lt;div&gt;
+      &lt;CropImage
+        src={imageUrl}
+        aspectRatio="4/3"
+        edgeSnap={0.03}
+        adapter="imageflow"
+        onChange={crop.onChange}
+        onCommit={crop.onCommit}
+        style={{ maxWidth: '600px' }}
+      /&gt;
+
+      &lt;div&gt;
+        &lt;pre&gt;{crop.querystring}&lt;/pre&gt;
+        &lt;button onClick={crop.reset}&gt;Reset&lt;/button&gt;
+        &lt;button onClick={handleSave}&gt;Save&lt;/button&gt;
+      &lt;/div&gt;
+    &lt;/div&gt;
+  );
+}</code></pre>
+
+      <div class="note">
+        <p><strong>SSR note:</strong> The web component registration is guarded with <code>typeof window !== 'undefined'</code>, so the import is safe for Next.js and other SSR frameworks. The element renders as an empty custom element during SSR and hydrates on the client.</p>
+      </div>
+    </div>
+  </div>
+
+  <footer class="site-footer">
+    <span>crop-image — <a href="https://github.com/lilith/cropimage">GitHub</a></span>
+    <a href="./api/">Full API Reference</a>
+  </footer>
+</body>
+</html>
