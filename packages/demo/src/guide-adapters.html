@@ -36,10 +36,10 @@
 
       <table>
         <thead>
-          <tr><th>Adapter</th><th>Server</th><th>Padding Parameter</th></tr>
+          <tr><th>Adapter</th><th>Server</th><th>Padding</th></tr>
         </thead>
         <tbody>
-          <tr><td><code>generic</code></td><td>Any RIAPI server</td><td>(none)</td></tr>
+          <tr><td><code>generic</code></td><td>Any RIAPI server</td><td>Crop only (no padding output)</td></tr>
           <tr><td><code>imageflow</code></td><td>Imageflow Server</td><td><code>s.pad=T,R,B,L</code> (source pixels)</td></tr>
           <tr><td><code>imageresizer</code></td><td>ImageResizer (v3/v4/v5)</td><td><code>margin=T,R,B,L</code> (source pixels)</td></tr>
         </tbody>
@@ -58,17 +58,25 @@
 
       <h3>Generic Adapter</h3>
       <p>All adapters use fractional units (<code>cropxunits=1</code>, <code>cropyunits=1</code>), so crop coordinates map directly to 0..1 fractions of the source image.</p>
-      <pre><code>?crop=0.1,0.15,0.9,0.85&cropxunits=1&cropyunits=1</code></pre>
+      <pre><code>?crop=0.1,0.15,0.9,0.85&amp;cropxunits=1&amp;cropyunits=1</code></pre>
       <p>The generic adapter does not output padding parameters. Use it when your server doesn't support letterboxing, or when you're handling padding separately.</p>
 
       <h3>Imageflow Adapter</h3>
-      <p>Same crop format, plus <code>s.pad</code> for letterbox padding in source pixels:</p>
-      <pre><code>?crop=0,0.1,1,0.9&cropxunits=1&cropyunits=1&s.pad=50,0,50,0</code></pre>
+      <p>Crop uses the same <code>crop</code>/<code>cropxunits</code>/<code>cropyunits</code> parameters. When padding is present (crop-pad mode), it's serialized as <code>s.pad=T,R,B,L</code> in source pixels:</p>
+      <pre><code>?crop=0,0.1,1,0.9&amp;cropxunits=1&amp;cropyunits=1&amp;s.pad=50,0,50,0</code></pre>
       <p>Padding values are <code>Math.round(fraction * sourceDimension)</code>. For a 1000x800 image with 5% top padding: <code>0.05 * 800 = 40px</code>.</p>
 
+      <div class="note">
+        <p><strong>Imageflow server note:</strong> Imageflow natively supports <code>crop</code>, <code>cropxunits</code>, and <code>cropyunits</code>. It also supports the shorthand <code>c=x1,y1,x2,y2</code> which automatically sets units to 100 (percentage mode). Padding in Imageflow is typically handled by the layout engine via <code>mode=pad</code> with target <code>w</code>/<code>h</code> dimensions rather than explicit padding parameters. The <code>s.pad</code> output from this adapter is intended for custom server-side handling — your application code should interpret it and apply padding accordingly.</p>
+      </div>
+
       <h3>ImageResizer Adapter</h3>
-      <p>Same as Imageflow but uses <code>margin</code> instead of <code>s.pad</code>:</p>
-      <pre><code>?crop=0,0.1,1,0.9&cropxunits=1&cropyunits=1&margin=50,0,50,0</code></pre>
+      <p>Same crop format, with padding serialized as <code>margin=T,R,B,L</code> in source pixels:</p>
+      <pre><code>?crop=0,0.1,1,0.9&amp;cropxunits=1&amp;cropyunits=1&amp;margin=50,0,50,0</code></pre>
+
+      <div class="note">
+        <p><strong>ImageResizer note:</strong> <code>margin</code> was part of the ImageResizer v3/v4 spec. Imageflow recognizes the key but has not yet implemented parsing for it. If your server doesn't handle <code>margin</code>, use the generic adapter and process padding in your application code.</p>
+      </div>
 
       <h2>Bidirectional Conversion</h2>
       <p>All adapters support both directions: selection-to-querystring and querystring-to-selection. This is useful for restoring a previously saved crop.</p>
@@ -153,9 +161,17 @@ const params = parseQuerystring(qs);
       <p>All adapters use the same coordinate system internally:</p>
       <ul>
         <li><strong>Crop coordinates</strong> are 0..1 fractions of the source image. <code>(0, 0)</code> is top-left, <code>(1, 1)</code> is bottom-right.</li>
-        <li><strong>Padding</strong> is also 0..1 fractions. A <code>pad.top</code> of <code>0.1</code> means 10% of the source height added above the crop.</li>
-        <li>The <code>cropxunits=1</code> and <code>cropyunits=1</code> parameters tell RIAPI servers that coordinates are fractional (not pixels).</li>
+        <li><strong>Padding</strong> is also 0..1 fractions internally. A <code>pad.top</code> of <code>0.1</code> means 10% of the source height. The Imageflow and ImageResizer adapters convert these to source pixels in the querystring.</li>
+        <li><code>cropxunits=1</code> and <code>cropyunits=1</code> tell the server that coordinates are fractional (not pixels).</li>
       </ul>
+
+      <h3>Imageflow's <code>c=</code> Shorthand</h3>
+      <p>Imageflow also supports <code>c=x1,y1,x2,y2</code> which automatically sets <code>cropxunits=100</code> and <code>cropyunits=100</code> (percentage mode). A crop of <code>c=10,20,90,80</code> means 10%-90% horizontally, 20%-80% vertically. The adapters use fractional <code>crop=</code> instead, but if you're building URLs by hand, <code>c=</code> is more concise.</p>
+
+      <h3>RIAPI Execution Order</h3>
+      <p>In both Imageflow and ImageResizer, the processing pipeline is:</p>
+      <pre><code>trim → srotate → sflip → crop → scale → filter → pad → rotate → flip</code></pre>
+      <p>Crop coordinates refer to the source image before any scaling. Padding is applied after scaling.</p>
 
       <div class="note">
         <p><strong>Padding is only generated in <code>crop-pad</code> mode.</strong> In standard <code>crop</code> mode, the crop is constrained to 0..1 bounds and padding is always zero. Switch to <code>mode="crop-pad"</code> to allow the selection to extend beyond the image edges.</p>
@@ -164,7 +180,7 @@ const params = parseQuerystring(qs);
   </div>
 
   <footer class="site-footer">
-    <span>crop-image — <a href="https://github.com/lilith/cropimage">GitHub</a></span>
+    <span>crop-image — <a href="https://github.com/imazen/cropimage">GitHub</a></span>
     <a href="./api/">Full API Reference</a>
   </footer>
 </body>

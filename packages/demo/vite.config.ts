@@ -3,7 +3,7 @@ import { resolve } from 'path';
 
 export default defineConfig({
   root: 'src',
-  base: '/cropimage/',
+  base: '/',
   server: {
     port: 3100,
   },
