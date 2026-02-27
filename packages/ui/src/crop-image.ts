@@ -945,6 +945,13 @@ function computeResizedFrame(
   if (handle.includes('w')) x1 = mouseX;
   if (handle.includes('e')) x2 = mouseX;
 
+  // Snap to container edges when close
+  const EDGE_SNAP_PX = 12;
+  if (handle.includes('n') && y1 < EDGE_SNAP_PX) y1 = 0;
+  if (handle.includes('s') && containerH - y2 < EDGE_SNAP_PX) y2 = containerH;
+  if (handle.includes('w') && x1 < EDGE_SNAP_PX) x1 = 0;
+  if (handle.includes('e') && containerW - x2 < EDGE_SNAP_PX) x2 = containerW;
+
   // Enforce minimum size
   if (x2 - x1 < minSize) {
     if (handle.includes('w')) x1 = x2 - minSize;
