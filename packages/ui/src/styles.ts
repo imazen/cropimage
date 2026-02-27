@@ -75,6 +75,67 @@ export const STYLES = `
   border-radius: 50%;
 }
 
+/* Resize handles container */
+.handles {
+  position: absolute;
+  box-sizing: border-box;
+  z-index: 5;
+  pointer-events: none;
+}
+
+.handle {
+  position: absolute;
+  box-sizing: border-box;
+  pointer-events: auto;
+}
+
+/* Corner handles — 28px hit zone centered on frame corner */
+.handle-nw, .handle-ne, .handle-sw, .handle-se {
+  width: 28px;
+  height: 28px;
+}
+
+.handle-nw { top: -14px; left: -14px; cursor: nwse-resize; }
+.handle-ne { top: -14px; right: -14px; cursor: nesw-resize; }
+.handle-sw { bottom: -14px; left: -14px; cursor: nesw-resize; }
+.handle-se { bottom: -14px; right: -14px; cursor: nwse-resize; }
+
+/* Edge handles — 14px wide strip along each edge */
+.handle-n, .handle-s {
+  left: 28px;
+  right: 28px;
+  height: 14px;
+  cursor: ns-resize;
+}
+
+.handle-e, .handle-w {
+  top: 28px;
+  bottom: 28px;
+  width: 14px;
+  cursor: ew-resize;
+}
+
+.handle-n { top: -7px; }
+.handle-s { bottom: -7px; }
+.handle-e { right: -7px; }
+.handle-w { left: -7px; }
+
+/* L-shaped corner marks */
+.handle-nw::after, .handle-ne::after, .handle-sw::after, .handle-se::after {
+  content: '';
+  position: absolute;
+  width: 16px;
+  height: 16px;
+  border-color: var(--crop-border-color);
+  border-style: solid;
+  border-width: 0;
+}
+
+.handle-nw::after { top: 14px; left: 14px; border-top-width: 3px; border-left-width: 3px; }
+.handle-ne::after { top: 14px; right: 14px; border-top-width: 3px; border-right-width: 3px; }
+.handle-sw::after { bottom: 14px; left: 14px; border-bottom-width: 3px; border-left-width: 3px; }
+.handle-se::after { bottom: 14px; right: 14px; border-bottom-width: 3px; border-right-width: 3px; }
+
 /* Zoom slider */
 .zoom-slider {
   position: absolute;

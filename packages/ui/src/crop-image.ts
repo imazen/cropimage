@@ -15,6 +15,7 @@ import {
 import {
   type ViewportState,
   type FrameRect,
+  type ImageTransform,
   viewportToCropRect,
   cropRectToViewport,
   clampViewport,
@@ -24,6 +25,7 @@ import {
   effectiveFrameAR,
   resolveFrameAR,
   zoomToward,
+  frameToCropRect,
 } from './viewport-math.js';
 
 import {
@@ -42,6 +44,11 @@ const ADAPTERS: Record<string, () => RiapiAdapter> = {
   imageresizer: () => new ImageResizerAdapter(),
 };
 
+const HANDLE_NAMES = ['n', 'ne', 'e', 'se', 's', 'sw', 'w', 'nw'] as const;
+type HandleName = typeof HANDLE_NAMES[number];
+
+const MIN_FRAME_PX = 40;
+
 export class CropImageElement extends HTMLElement {
   static formAssociated = true;
 
@@ -50,7 +57,7 @@ export class CropImageElement extends HTMLElement {
       'src', 'mode', 'aspect-ratio', 'aspect-ratios',
       'edge-snap', 'even-padding', 'min-width', 'min-height',
       'max-width', 'max-height', 'value', 'name', 'adapter',
-      'disabled', 'shape',
+      'disabled', 'shape', 'max-zoom',
     ];
   }
 
@@ -62,6 +69,7 @@ export class CropImageElement extends HTMLElement {
   #frame: HTMLDivElement;
   #fgImg: HTMLImageElement;
   #frameBorder: HTMLDivElement;
+  #handles: HTMLDivElement;
   #slider: HTMLInputElement;
   #loaderImg: HTMLImageElement;
 
@@ -72,6 +80,7 @@ export class CropImageElement extends HTMLElement {
   #imageLoaded = false;
   #imgNatW = 0;
   #imgNatH = 0;
+  #userFrameAR: number | null = null;
 
   #resizeObserver: ResizeObserver;
   #cleanupPan: (() => void) | null = null;
@@ -79,6 +88,14 @@ export class CropImageElement extends HTMLElement {
   #cleanupWheel: (() => void) | null = null;
   #cleanupDblClick: (() => void) | null = null;
   #wheelCommitTimer: ReturnType<typeof setTimeout> | null = null;
+
+  // Frame resize state
+  #resizing = false;
+  #resizeHandle: HandleName = 'se';
+  #resizePointerId: number | null = null;
+  #frozenTransform: ImageTransform | null = null;
+  #origFrameRect: FrameRect | null = null;
+  #dragFrameRect: FrameRect | null = null;
 
   constructor() {
     super();
@@ -115,6 +132,17 @@ export class CropImageElement extends HTMLElement {
     this.#frameBorder = document.createElement('div');
     this.#frameBorder.className = 'frame-border';
 
+    // Resize handles
+    this.#handles = document.createElement('div');
+    this.#handles.className = 'handles';
+    for (const name of HANDLE_NAMES) {
+      const h = document.createElement('div');
+      h.className = `handle handle-${name}`;
+      h.dataset.handle = name;
+      h.addEventListener('pointerdown', (e) => this.#onHandlePointerDown(e, name));
+      this.#handles.append(h);
+    }
+
     // Zoom slider
     this.#slider = document.createElement('input');
     this.#slider.type = 'range';
@@ -124,6 +152,8 @@ export class CropImageElement extends HTMLElement {
     this.#slider.step = '0.01';
     this.#slider.value = '1';
     this.#slider.setAttribute('aria-label', 'Zoom level');
+    // Prevent pan handler from capturing slider interactions
+    this.#slider.addEventListener('pointerdown', (e) => e.stopPropagation());
 
     // Hidden loader image (to detect load/error)
     this.#loaderImg = document.createElement('img');
@@ -135,6 +165,7 @@ export class CropImageElement extends HTMLElement {
       this.#bgImg,
       this.#frame,
       this.#frameBorder,
+      this.#handles,
       this.#slider,
     );
     this.#shadow.append(style, this.#container, this.#loaderImg);
@@ -190,6 +221,24 @@ export class CropImageElement extends HTMLElement {
         this.#shape = value === 'circle' ? 'circle' : 'rect';
         if (this.#imageLoaded) {
           this.#viewport = this.#clampVP(this.#viewport);
+          this.#render();
+          this.#emitChange();
+        }
+        break;
+      case 'aspect-ratio':
+        this.#userFrameAR = null;
+        this.#syncConfigFromAttributes();
+        if (this.#imageLoaded) {
+          this.#viewport = this.#clampVP(this.#viewport);
+          this.#render();
+          this.#emitChange();
+        }
+        break;
+      case 'max-zoom':
+        if (this.#imageLoaded) {
+          this.#slider.max = String(this.#getMaxZoom());
+          this.#viewport = this.#clampVP(this.#viewport);
+          this.#slider.value = String(this.#viewport.zoom);
           this.#render();
           this.#emitChange();
         }
@@ -308,7 +357,9 @@ export class CropImageElement extends HTMLElement {
   }
 
   #getFrameAR(): number | null {
-    return effectiveFrameAR(this.#config, this.#shape, this.#imgNatW, this.#imgNatH);
+    const configAR = effectiveFrameAR(this.#config, this.#shape, this.#imgNatW, this.#imgNatH);
+    if (configAR !== null) return configAR;
+    return this.#userFrameAR;
   }
 
   #getResolvedFrameAR(): number {
@@ -322,7 +373,13 @@ export class CropImageElement extends HTMLElement {
   }
 
   #getMaxZoom(): number {
-    return getMaxZoom(this.#imgNatW, this.#imgNatH);
+    const natural = getMaxZoom(this.#imgNatW, this.#imgNatH);
+    const attr = this.getAttribute('max-zoom');
+    if (attr) {
+      const v = Number(attr);
+      if (v > 0 && isFinite(v)) return Math.min(natural, Math.max(1, v));
+    }
+    return natural;
   }
 
   #clampVP(vp: ViewportState): ViewportState {
@@ -337,12 +394,21 @@ export class CropImageElement extends HTMLElement {
 
   #computeSelection(): CropSelection {
     if (!this.#imageLoaded) return defaultSelection();
+
+    // During resize, compute from the dragged frame + frozen transform
+    if (this.#resizing && this.#frozenTransform && this.#dragFrameRect) {
+      const crop = frameToCropRect(
+        this.#dragFrameRect, this.#frozenTransform,
+        this.#imgNatW, this.#imgNatH,
+      );
+      return constrain(crop, this.#config);
+    }
+
     const crop = viewportToCropRect(
       this.#viewport,
       this.#getResolvedFrameAR(),
       this.#getImageAR(),
     );
-    // Run through the constraint engine for edge-snap, min/max, AR correction, padding
     return constrain(crop, this.#config);
   }
 
@@ -390,18 +456,19 @@ export class CropImageElement extends HTMLElement {
     const rect = this.#container.getBoundingClientRect();
     if (rect.width <= 0 || rect.height <= 0) return;
 
-    const frameAR = this.#getFrameAR();
-    const frameRect = computeFrameRect(rect.width, rect.height, frameAR);
+    let frameRect: FrameRect;
+    let transform: ImageTransform;
 
-    // Compute image transform
-    const transform = computeImageTransform(
-      this.#viewport,
-      frameRect,
-      this.#imgNatW,
-      this.#imgNatH,
-    );
+    if (this.#resizing && this.#frozenTransform && this.#dragFrameRect) {
+      frameRect = this.#dragFrameRect;
+      transform = this.#frozenTransform;
+    } else {
+      const frameAR = this.#getFrameAR();
+      frameRect = computeFrameRect(rect.width, rect.height, frameAR);
+      transform = computeImageTransform(this.#viewport, frameRect, this.#imgNatW, this.#imgNatH);
+    }
 
-    // Background image: same transform, dimmed via CSS
+    // Background image
     this.#bgImg.style.transform = `translate(${transform.x}px, ${transform.y}px) scale(${transform.scale})`;
 
     // Frame position
@@ -432,6 +499,12 @@ export class CropImageElement extends HTMLElement {
     } else {
       this.#frameBorder.classList.remove('circle');
     }
+
+    // Handles position
+    this.#handles.style.left = `${frameRect.x}px`;
+    this.#handles.style.top = `${frameRect.y}px`;
+    this.#handles.style.width = `${frameRect.w}px`;
+    this.#handles.style.height = `${frameRect.h}px`;
   }
 
   // --- Events ---
@@ -505,20 +578,15 @@ export class CropImageElement extends HTMLElement {
   }
 
   #handlePan(dxPx: number, dyPx: number): void {
-    if (!this.#imageLoaded) return;
+    if (!this.#imageLoaded || this.#resizing) return;
 
     const rect = this.#container.getBoundingClientRect();
     const frameRect = computeFrameRect(rect.width, rect.height, this.#getFrameAR());
-    const imageAR = this.#getImageAR();
-    const frameAR = this.#getResolvedFrameAR();
-
-    // Convert pixel delta to image-fraction delta
-    // At the current zoom, the image display dimensions are:
     const transform = computeImageTransform(this.#viewport, frameRect, this.#imgNatW, this.#imgNatH);
     const imgDisplayW = this.#imgNatW * transform.scale;
     const imgDisplayH = this.#imgNatH * transform.scale;
 
-    // Pan in image fraction units (note: dragging image right = negative panX)
+    // Pan in image fraction units (dragging image right = negative panX)
     const dFracX = -dxPx / imgDisplayW;
     const dFracY = -dyPx / imgDisplayH;
 
@@ -533,7 +601,7 @@ export class CropImageElement extends HTMLElement {
   }
 
   #handleZoom(factor: number, cx: number, cy: number): void {
-    if (!this.#imageLoaded) return;
+    if (!this.#imageLoaded || this.#resizing) return;
 
     const rect = this.#container.getBoundingClientRect();
     const frameRect = computeFrameRect(rect.width, rect.height, this.#getFrameAR());
@@ -565,7 +633,7 @@ export class CropImageElement extends HTMLElement {
   }
 
   #handleDblClick(cx: number, cy: number): void {
-    if (!this.#imageLoaded) return;
+    if (!this.#imageLoaded || this.#resizing) return;
 
     if (this.#viewport.zoom > 1.05) {
       // Reset to fit
@@ -587,10 +655,111 @@ export class CropImageElement extends HTMLElement {
     this.#emitCommit();
   }
 
+  // --- Frame resize handles ---
+
+  #onHandlePointerDown(e: PointerEvent, handle: HandleName): void {
+    if (this.hasAttribute('disabled')) return;
+    if (!this.#imageLoaded) return;
+    if (this.#resizing) return;
+    if (e.button !== 0) return;
+
+    e.stopPropagation();
+    e.preventDefault();
+
+    const rect = this.#container.getBoundingClientRect();
+    const frameAR = this.#getFrameAR();
+    const frameRect = computeFrameRect(rect.width, rect.height, frameAR);
+
+    this.#resizing = true;
+    this.#resizeHandle = handle;
+    this.#resizePointerId = e.pointerId;
+    this.#origFrameRect = { ...frameRect };
+    this.#dragFrameRect = { ...frameRect };
+    this.#frozenTransform = computeImageTransform(
+      this.#viewport, frameRect, this.#imgNatW, this.#imgNatH,
+    );
+
+    this.#handles.setPointerCapture(e.pointerId);
+    this.#container.classList.add('grabbing');
+
+    this.#handles.addEventListener('pointermove', this.#onResizePointerMove);
+    this.#handles.addEventListener('pointerup', this.#onResizePointerUp);
+    this.#handles.addEventListener('pointercancel', this.#onResizePointerUp);
+  }
+
+  #onResizePointerMove = (e: PointerEvent): void => {
+    if (e.pointerId !== this.#resizePointerId) return;
+    if (!this.#origFrameRect || !this.#dragFrameRect) return;
+
+    const rect = this.#container.getBoundingClientRect();
+    const mouseX = e.clientX - rect.left;
+    const mouseY = e.clientY - rect.top;
+
+    this.#dragFrameRect = computeResizedFrame(
+      this.#resizeHandle,
+      mouseX,
+      mouseY,
+      this.#origFrameRect,
+      this.#getLockedAR(),
+      MIN_FRAME_PX,
+      rect.width,
+      rect.height,
+    );
+
+    this.#render();
+    this.#emitChange();
+  };
+
+  #onResizePointerUp = (e: PointerEvent): void => {
+    if (e.pointerId !== this.#resizePointerId) return;
+
+    this.#handles.releasePointerCapture(e.pointerId);
+    this.#container.classList.remove('grabbing');
+    this.#handles.removeEventListener('pointermove', this.#onResizePointerMove);
+    this.#handles.removeEventListener('pointerup', this.#onResizePointerUp);
+    this.#handles.removeEventListener('pointercancel', this.#onResizePointerUp);
+
+    // Compute crop from dragged frame + frozen transform
+    if (this.#frozenTransform && this.#dragFrameRect) {
+      const crop = frameToCropRect(
+        this.#dragFrameRect, this.#frozenTransform,
+        this.#imgNatW, this.#imgNatH,
+      );
+
+      // In free mode, set userFrameAR from the dragged frame
+      const configAR = effectiveFrameAR(this.#config, this.#shape, this.#imgNatW, this.#imgNatH);
+      if (configAR === null && this.#dragFrameRect.w > 0 && this.#dragFrameRect.h > 0) {
+        this.#userFrameAR = this.#dragFrameRect.w / this.#dragFrameRect.h;
+      }
+
+      // Convert to viewport state using the (possibly new) frame AR
+      const frameAR = this.#getResolvedFrameAR();
+      const imageAR = this.#getImageAR();
+      this.#viewport = cropRectToViewport(crop, frameAR, imageAR);
+      this.#viewport = this.#clampVP(this.#viewport);
+      this.#slider.value = String(this.#viewport.zoom);
+    }
+
+    this.#resizing = false;
+    this.#frozenTransform = null;
+    this.#origFrameRect = null;
+    this.#dragFrameRect = null;
+    this.#resizePointerId = null;
+
+    this.#render();
+    this.#emitChange();
+    this.#emitCommit();
+  };
+
+  /** Get the locked aspect ratio for frame resize, or null if free. */
+  #getLockedAR(): number | null {
+    return effectiveFrameAR(this.#config, this.#shape, this.#imgNatW, this.#imgNatH);
+  }
+
   // --- Slider ---
 
   #onSliderInput = (): void => {
-    if (!this.#imageLoaded) return;
+    if (!this.#imageLoaded || this.#resizing) return;
 
     const newZoom = Number(this.#slider.value);
     const rect = this.#container.getBoundingClientRect();
@@ -617,7 +786,7 @@ export class CropImageElement extends HTMLElement {
   // --- Keyboard ---
 
   #onKeyDown = (e: KeyboardEvent): void => {
-    if (this.hasAttribute('disabled')) return;
+    if (this.hasAttribute('disabled') || this.#resizing) return;
 
     const action = handleViewportKeyboard(e);
     if (!action) return;
@@ -656,6 +825,8 @@ export class CropImageElement extends HTMLElement {
   };
 }
 
+// --- Helper functions ---
+
 function parseAspectRatio(str: string): AspectRatio | null {
   // Accepts "16/9", "16:9", "1.5"
   const slashMatch = str.match(/^(\d+(?:\.\d+)?)\s*[/:]\s*(\d+(?:\.\d+)?)$/);
@@ -667,6 +838,87 @@ function parseAspectRatio(str: string): AspectRatio | null {
     return { width: num, height: 1 };
   }
   return null;
+}
+
+/**
+ * Compute the resized frame rect during a handle drag.
+ * Maintains aspect ratio if lockedAR is provided.
+ */
+function computeResizedFrame(
+  handle: HandleName,
+  mouseX: number,
+  mouseY: number,
+  origFrame: FrameRect,
+  lockedAR: number | null,
+  minSize: number,
+  containerW: number,
+  containerH: number,
+): FrameRect {
+  let x1 = origFrame.x;
+  let y1 = origFrame.y;
+  let x2 = origFrame.x + origFrame.w;
+  let y2 = origFrame.y + origFrame.h;
+
+  // Move the relevant edges based on handle
+  if (handle.includes('n')) y1 = mouseY;
+  if (handle.includes('s')) y2 = mouseY;
+  if (handle.includes('w')) x1 = mouseX;
+  if (handle.includes('e')) x2 = mouseX;
+
+  // Enforce minimum size
+  if (x2 - x1 < minSize) {
+    if (handle.includes('w')) x1 = x2 - minSize;
+    else x2 = x1 + minSize;
+  }
+  if (y2 - y1 < minSize) {
+    if (handle.includes('n')) y1 = y2 - minSize;
+    else y2 = y1 + minSize;
+  }
+
+  // If AR locked, adjust the non-dragged dimension
+  if (lockedAR !== null) {
+    const w = x2 - x1;
+    const h = y2 - y1;
+
+    if (handle === 'n' || handle === 's') {
+      // Vertical edge drag: width adjusts symmetrically
+      const newW = h * lockedAR;
+      const cx = (x1 + x2) / 2;
+      x1 = cx - newW / 2;
+      x2 = cx + newW / 2;
+    } else if (handle === 'e' || handle === 'w') {
+      // Horizontal edge drag: height adjusts symmetrically
+      const newH = w / lockedAR;
+      const cy = (y1 + y2) / 2;
+      y1 = cy - newH / 2;
+      y2 = cy + newH / 2;
+    } else {
+      // Corner drag: use the more constraining dimension
+      const currentAR = w / h;
+      if (currentAR > lockedAR) {
+        const newW = h * lockedAR;
+        if (handle.includes('w')) x1 = x2 - newW;
+        else x2 = x1 + newW;
+      } else {
+        const newH = w / lockedAR;
+        if (handle.includes('n')) y1 = y2 - newH;
+        else y2 = y1 + newH;
+      }
+    }
+  }
+
+  // Clamp to container
+  x1 = Math.max(0, x1);
+  y1 = Math.max(0, y1);
+  x2 = Math.min(containerW, x2);
+  y2 = Math.min(containerH, y2);
+
+  return {
+    x: x1,
+    y: y1,
+    w: Math.max(minSize, x2 - x1),
+    h: Math.max(minSize, y2 - y1),
+  };
 }
 
 // Register the element

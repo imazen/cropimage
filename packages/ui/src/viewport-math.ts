@@ -276,6 +276,26 @@ export function resolveFrameAR(
 }
 
 /**
+ * Compute the crop rect visible through a given frame rect,
+ * given the current image transform (frozen during frame resize).
+ */
+export function frameToCropRect(
+  frameRect: FrameRect,
+  transform: ImageTransform,
+  imgNatW: number,
+  imgNatH: number,
+): CropRect {
+  const imgDisplayW = imgNatW * transform.scale;
+  const imgDisplayH = imgNatH * transform.scale;
+  return {
+    x1: (frameRect.x - transform.x) / imgDisplayW,
+    y1: (frameRect.y - transform.y) / imgDisplayH,
+    x2: (frameRect.x + frameRect.w - transform.x) / imgDisplayW,
+    y2: (frameRect.y + frameRect.h - transform.y) / imgDisplayH,
+  };
+}
+
+/**
  * Zoom toward a specific point in container pixel coordinates.
  * Returns a new ViewportState that keeps the point stationary on screen.
  */
