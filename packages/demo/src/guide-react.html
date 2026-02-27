@@ -106,9 +106,9 @@ function CropEditor() {
           <tr><td><code>src</code></td><td><code>string</code></td><td>Image URL (required)</td></tr>
           <tr><td><code>mode</code></td><td><code>'crop' | 'crop-pad'</code></td><td>Crop mode</td></tr>
           <tr><td><code>aspectRatio</code></td><td><code>string</code></td><td>Aspect ratio constraint</td></tr>
+          <tr><td><code>shape</code></td><td><code>'rect' | 'circle'</code></td><td>Frame shape (circle forces 1:1)</td></tr>
+          <tr><td><code>maxZoom</code></td><td><code>number</code></td><td>Maximum zoom level</td></tr>
           <tr><td><code>aspectRatios</code></td><td><code>Array&lt;{w, h, label?}&gt;</code></td><td>Array of ratio choices</td></tr>
-          <tr><td><code>edgeSnap</code></td><td><code>number</code></td><td>Edge snap threshold (0..1)</td></tr>
-          <tr><td><code>evenPadding</code></td><td><code>boolean</code></td><td>Mirror padding on opposing sides</td></tr>
           <tr><td><code>minWidth</code></td><td><code>number</code></td><td>Min crop width (source px)</td></tr>
           <tr><td><code>minHeight</code></td><td><code>number</code></td><td>Min crop height (source px)</td></tr>
           <tr><td><code>maxWidth</code></td><td><code>number</code></td><td>Max crop width (source px)</td></tr>

@@ -177,6 +177,64 @@ const params = parseQuerystring(qs);
       <div class="note">
         <p><strong>Padding is only generated in <code>crop-pad</code> mode.</strong> In standard <code>crop</code> mode, the crop is constrained to 0..1 bounds and padding is always zero. Switch to <code>mode="crop-pad"</code> to allow the selection to extend beyond the image edges.</p>
       </div>
+
+      <h2>.NET Integration</h2>
+      <p>The crop-image component was designed to pair with .NET image servers. The RIAPI querystring output plugs directly into Imageflow or ImageResizer.</p>
+
+      <h3>Imageflow Server (.NET)</h3>
+      <p>Append the querystring to your image URL. Imageflow processes it on the fly.</p>
+      <pre><code>// Razor Pages / MVC
+&lt;img src="/images/@Model.Filename@Model.CropQuerystring&amp;width=800" /&gt;
+
+// Or build the URL in C#
+var croppedUrl = $"/images/{filename}{cropQs}&amp;width=800&amp;format=webp";</code></pre>
+
+      <h3>ImageResizer (.NET)</h3>
+      <p>Same approach — the <code>crop</code> and <code>cropxunits</code>/<code>cropyunits</code> params are native ImageResizer syntax.</p>
+      <pre><code>// ASP.NET MVC
+&lt;img src="@Url.Content("~/photos/" + Model.Photo)@Model.CropParams&amp;width=600" /&gt;</code></pre>
+
+      <h3>Blazor</h3>
+      <p>Use the web component directly in Blazor pages. The IIFE build auto-registers the element.</p>
+      <pre><code>&lt;!-- In _Host.cshtml or index.html --&gt;
+&lt;script src="https://unpkg.com/@@imazen/crop-image/dist/crop-image.iife.js"&gt;&lt;/script&gt;
+
+&lt;!-- In a Blazor component --&gt;
+&lt;crop-image src="@ImageUrl" aspect-ratio="16/9" adapter="imageflow"
+  @ref="cropElement"&gt;&lt;/crop-image&gt;
+
+&lt;button @onclick="Save"&gt;Save&lt;/button&gt;
+
+@@code {
+  private ElementReference cropElement;
+
+  private async Task Save() {
+    // Read the querystring via JS interop
+    var qs = await JS.InvokeAsync&lt;string&gt;(
+      "eval", "document.querySelector('crop-image').riapiQuerystring");
+    // Store qs alongside the image reference
+  }
+}</code></pre>
+
+      <h3>Storing Crop Data</h3>
+      <p>The RIAPI querystring is a compact, URL-safe string that fully describes the crop. Store it alongside the image path in your database:</p>
+      <pre><code>// C# / Entity Framework
+public class Photo {
+    public string Path { get; set; }
+    public string CropParams { get; set; }  // e.g. "?crop=0.1,0.1,0.9,0.9&amp;cropxunits=1&amp;cropyunits=1"
+}
+
+// Render the cropped image
+var url = $"/images/{photo.Path}{photo.CropParams}&amp;width=800";</code></pre>
+
+      <h3>Any Backend</h3>
+      <p>If you're not using Imageflow or ImageResizer, the <code>crop-change</code> event gives you the selection as normalized 0..1 fractions. Multiply by source dimensions to get pixel coordinates in any language:</p>
+      <pre><code>// The selection.crop object: { x1, y1, x2, y2 } — all 0..1
+// To get pixel rect:
+int left   = (int)(crop.x1 * sourceWidth);
+int top    = (int)(crop.y1 * sourceHeight);
+int right  = (int)(crop.x2 * sourceWidth);
+int bottom = (int)(crop.y2 * sourceHeight);</code></pre>
     </div>
   </div>
 

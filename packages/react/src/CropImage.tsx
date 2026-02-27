@@ -33,6 +33,7 @@ export interface CropImageProps extends Omit<HTMLAttributes<HTMLElement>, 'onCha
   adapter?: 'generic' | 'imageflow' | 'imageresizer';
   disabled?: boolean;
   shape?: 'rect' | 'circle';
+  maxZoom?: number;
   onChange?: (detail: CropChangeDetail) => void;
   onCommit?: (detail: CropChangeDetail) => void;
 }
@@ -63,6 +64,7 @@ export const CropImage = forwardRef<CropImageRef, CropImageProps>(
       adapter,
       disabled,
       shape,
+      maxZoom,
       onChange,
       onCommit,
       ...rest
@@ -123,6 +125,7 @@ export const CropImage = forwardRef<CropImageRef, CropImageProps>(
     if (adapter) attrs.adapter = adapter;
     if (disabled) attrs.disabled = '';
     if (shape) attrs.shape = shape;
+    if (maxZoom !== undefined) attrs['max-zoom'] = String(maxZoom);
 
     // @ts-expect-error - crop-image is a custom element not known to React's JSX types
     return <crop-image ref={elRef} {...attrs} />;

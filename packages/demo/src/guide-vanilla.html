@@ -56,9 +56,9 @@
           <tr><td><code>src</code></td><td>string</td><td>—</td><td>Image URL to crop</td></tr>
           <tr><td><code>mode</code></td><td><code>crop</code> | <code>crop-pad</code></td><td><code>crop</code></td><td>Crop-only or crop with letterbox padding</td></tr>
           <tr><td><code>aspect-ratio</code></td><td>string</td><td>free</td><td>Lock ratio: <code>16/9</code>, <code>1:1</code>, or <code>1.5</code></td></tr>
+          <tr><td><code>shape</code></td><td><code>rect</code> | <code>circle</code></td><td><code>rect</code></td><td>Frame shape. Circle forces 1:1 aspect ratio.</td></tr>
+          <tr><td><code>max-zoom</code></td><td>number</td><td>auto</td><td>Maximum zoom level (default: image size / 50px)</td></tr>
           <tr><td><code>aspect-ratios</code></td><td>JSON</td><td>—</td><td>Menu of choices: <code>[{"w":16,"h":9,"label":"Wide"}]</code></td></tr>
-          <tr><td><code>edge-snap</code></td><td>number</td><td><code>0.02</code></td><td>Snap-to-edge threshold (0..1). Set to <code>0</code> to disable.</td></tr>
-          <tr><td><code>even-padding</code></td><td>boolean</td><td><code>false</code></td><td>Mirror padding on opposing sides (crop-pad mode only)</td></tr>
           <tr><td><code>min-width</code></td><td>number</td><td>—</td><td>Minimum crop width in source pixels</td></tr>
           <tr><td><code>min-height</code></td><td>number</td><td>—</td><td>Minimum crop height in source pixels</td></tr>
           <tr><td><code>max-width</code></td><td>number</td><td>—</td><td>Maximum crop width in source pixels</td></tr>
@@ -78,8 +78,8 @@
           <tr><th>Event</th><th>When</th></tr>
         </thead>
         <tbody>
-          <tr><td><code>crop-change</code></td><td>Continuously during drag (every pointer move)</td></tr>
-          <tr><td><code>crop-commit</code></td><td>Once when drag ends (pointer up)</td></tr>
+          <tr><td><code>crop-change</code></td><td>Continuously during pan, zoom, or frame resize</td></tr>
+          <tr><td><code>crop-commit</code></td><td>Once when a gesture ends (pointer up, scroll stop, slider change)</td></tr>
         </tbody>
       </table>
 
@@ -133,7 +133,7 @@ cropper.selection = {
 const sel = cropper.selection;
 
 // RIAPI querystring for the current crop
-const qs = cropper.ripiQuerystring;
+const qs = cropper.riapiQuerystring;
 
 // RIAPI params as an object
 const params = cropper.riapiParams;
@@ -147,11 +147,14 @@ const config = cropper.config;</code></pre>
 // Lock to 16:9
 cropper.setAttribute('aspect-ratio', '16/9');
 
+// Circle crop (forces 1:1)
+cropper.setAttribute('shape', 'circle');
+
+// Limit zoom to 4x
+cropper.setAttribute('max-zoom', '4');
+
 // Switch to crop-pad mode
 cropper.setAttribute('mode', 'crop-pad');
-
-// Enable even padding
-cropper.setAttribute('even-padding', '');
 
 // Change image
 cropper.setAttribute('src', '/another-photo.jpg');
@@ -160,24 +163,22 @@ cropper.setAttribute('src', '/another-photo.jpg');
 cropper.setAttribute('adapter', 'imageflow');</code></pre>
 
       <h2>CSS Custom Properties</h2>
-      <p>Style the crop overlay through CSS custom properties on the element:</p>
+      <p>Style the crop UI through CSS custom properties on the element:</p>
       <pre><code>crop-image {
-  --crop-handle-color: #fff;
-  --crop-handle-border: 1.5px solid rgba(0, 0, 0, 0.6);
-  --crop-overlay-color: rgba(0, 0, 0, 0.5);
-  --crop-border-color: rgba(255, 255, 255, 0.7);
-  --crop-border-width: 1px;
-  --crop-guide-color: rgba(255, 255, 255, 0.3);
-  --crop-guide-width: 0.5px;
+  --crop-overlay-color: rgba(0, 0, 0, 0.65);
+  --crop-border-color: rgba(255, 255, 255, 0.85);
+  --crop-border-width: 2px;
   --crop-pad-color: rgba(80, 140, 220, 0.25);
-  --crop-pad-stripe: rgba(80, 140, 220, 0.15);
+  --crop-slider-track: rgba(255, 255, 255, 0.3);
+  --crop-slider-thumb: #fff;
 }</code></pre>
 
       <h2>Keyboard Support</h2>
-      <p>Drag handles are focusable. Once focused, use arrow keys to nudge:</p>
+      <p>Click or tab to focus the crop element, then use:</p>
       <ul>
-        <li>Arrow keys move the handle by 1% of the image dimension</li>
-        <li>Shift + arrow moves by 5%</li>
+        <li><strong>Arrow keys</strong> — pan by 1% (Shift + arrow for 5%)</li>
+        <li><strong>+ / -</strong> — zoom in / out</li>
+        <li><strong>0 / Home</strong> — reset to fit</li>
       </ul>
 
       <h2>Complete Example</h2>
@@ -186,10 +187,7 @@ cropper.setAttribute('adapter', 'imageflow');</code></pre>
 &lt;head&gt;
   &lt;script src="https://unpkg.com/@imazen/crop-image/dist/crop-image.iife.js"&gt;&lt;/script&gt;
   &lt;style&gt;
-    crop-image {
-      max-width: 600px;
-      --crop-overlay-color: rgba(0, 0, 0, 0.6);
-    }
+    crop-image { max-width: 600px; }
   &lt;/style&gt;
 &lt;/head&gt;
 &lt;body&gt;
@@ -197,7 +195,7 @@ cropper.setAttribute('adapter', 'imageflow');</code></pre>
     src="/photo.jpg"
     aspect-ratio="16/9"
     mode="crop"
-    edge-snap="0.02"
+    max-zoom="8"
   &gt;&lt;/crop-image&gt;
 
   &lt;p&gt;Querystring: &lt;code id="output"&gt;&lt;/code&gt;&lt;/p&gt;

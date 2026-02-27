@@ -49,6 +49,21 @@ type HandleName = typeof HANDLE_NAMES[number];
 
 const MIN_FRAME_PX = 40;
 
+/** Common aspect ratios for snap-to during free-mode frame resize. */
+const SNAP_RATIOS: Array<{ value: number; label: string }> = [
+  { value: 1, label: '1 : 1' },
+  { value: 5 / 4, label: '5 : 4' },
+  { value: 4 / 3, label: '4 : 3' },
+  { value: 3 / 2, label: '3 : 2' },
+  { value: 16 / 9, label: '16 : 9' },
+  { value: 4 / 5, label: '4 : 5' },
+  { value: 3 / 4, label: '3 : 4' },
+  { value: 2 / 3, label: '2 : 3' },
+  { value: 9 / 16, label: '9 : 16' },
+];
+
+const SNAP_THRESHOLD = 0.06;
+
 export class CropImageElement extends HTMLElement {
   static formAssociated = true;
 
@@ -70,6 +85,7 @@ export class CropImageElement extends HTMLElement {
   #fgImg: HTMLImageElement;
   #frameBorder: HTMLDivElement;
   #handles: HTMLDivElement;
+  #snapLabel: HTMLDivElement;
   #slider: HTMLInputElement;
   #loaderImg: HTMLImageElement;
 
@@ -142,6 +158,11 @@ export class CropImageElement extends HTMLElement {
       h.addEventListener('pointerdown', (e) => this.#onHandlePointerDown(e, name));
       this.#handles.append(h);
     }
+
+    // Snap ratio label (inside handles so it moves with frame)
+    this.#snapLabel = document.createElement('div');
+    this.#snapLabel.className = 'snap-label';
+    this.#handles.append(this.#snapLabel);
 
     // Zoom slider
     this.#slider = document.createElement('input');
@@ -694,17 +715,36 @@ export class CropImageElement extends HTMLElement {
     const rect = this.#container.getBoundingClientRect();
     const mouseX = e.clientX - rect.left;
     const mouseY = e.clientY - rect.top;
+    const lockedAR = this.#getLockedAR();
 
     this.#dragFrameRect = computeResizedFrame(
       this.#resizeHandle,
       mouseX,
       mouseY,
       this.#origFrameRect,
-      this.#getLockedAR(),
+      lockedAR,
       MIN_FRAME_PX,
       rect.width,
       rect.height,
     );
+
+    // Snap-to-AR in free mode
+    if (lockedAR === null && this.#dragFrameRect.w > 0 && this.#dragFrameRect.h > 0) {
+      const ar = this.#dragFrameRect.w / this.#dragFrameRect.h;
+      const snap = findSnapRatio(ar, this.#getImageAR());
+      if (snap) {
+        // Re-compute with the snapped AR
+        this.#dragFrameRect = computeResizedFrame(
+          this.#resizeHandle, mouseX, mouseY,
+          this.#origFrameRect, snap.ratio,
+          MIN_FRAME_PX, rect.width, rect.height,
+        );
+        this.#snapLabel.textContent = snap.label;
+        this.#snapLabel.classList.add('visible');
+      } else {
+        this.#snapLabel.classList.remove('visible');
+      }
+    }
 
     this.#render();
     this.#emitChange();
@@ -745,6 +785,7 @@ export class CropImageElement extends HTMLElement {
     this.#origFrameRect = null;
     this.#dragFrameRect = null;
     this.#resizePointerId = null;
+    this.#snapLabel.classList.remove('visible');
 
     this.#render();
     this.#emitChange();
@@ -838,6 +879,30 @@ function parseAspectRatio(str: string): AspectRatio | null {
     return { width: num, height: 1 };
   }
   return null;
+}
+
+/** Find the closest common aspect ratio within the snap threshold. */
+function findSnapRatio(
+  ar: number,
+  imageAR: number,
+): { ratio: number; label: string } | null {
+  const candidates = [
+    ...SNAP_RATIOS,
+    { value: imageAR, label: 'Original' },
+  ];
+
+  let best: { ratio: number; label: string } | null = null;
+  let bestDist = SNAP_THRESHOLD;
+
+  for (const c of candidates) {
+    const dist = Math.abs(ar - c.value) / c.value;
+    if (dist < bestDist) {
+      best = { ratio: c.value, label: c.label };
+      bestDist = dist;
+    }
+  }
+
+  return best;
 }
 
 /**

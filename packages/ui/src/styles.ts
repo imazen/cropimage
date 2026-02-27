@@ -196,6 +196,27 @@ export const STYLES = `
   outline-offset: 2px;
 }
 
+/* Snap ratio label (shown during frame resize) */
+.snap-label {
+  position: absolute;
+  top: -26px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0, 0, 0, 0.75);
+  color: var(--crop-border-color);
+  font: 500 11px/1 system-ui, -apple-system, sans-serif;
+  padding: 4px 8px;
+  border-radius: 3px;
+  white-space: nowrap;
+  opacity: 0;
+  transition: opacity 0.12s;
+  pointer-events: none;
+}
+
+.snap-label.visible {
+  opacity: 1;
+}
+
 /* Hidden image used only to load the source */
 .hidden-loader {
   display: none;

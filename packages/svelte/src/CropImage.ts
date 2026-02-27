@@ -27,6 +27,7 @@ export interface CropImageProps {
   adapter?: 'generic' | 'imageflow' | 'imageresizer';
   disabled?: boolean;
   shape?: 'rect' | 'circle';
+  'max-zoom'?: string;
 }
 
 /**
