@@ -265,6 +265,14 @@
       background: var(--green);
     }
 
+    /* Hint text */
+    .hint {
+      font-size: 0.72rem;
+      color: var(--text-dim);
+      line-height: 1.4;
+      padding: 0.5rem 0;
+    }
+
     /* Responsive */
     @media (max-width: 860px) {
       .workspace {
@@ -310,7 +318,7 @@
   <div class="page">
     <header>
       <h1>&lt;<span>crop-image</span>&gt;</h1>
-      <span class="version">v0.1.0</span>
+      <span class="version">v0.2.0</span>
     </header>
 
     <div class="workspace">
@@ -320,7 +328,6 @@
           id="cropper"
           src="https://picsum.photos/1200/800"
           mode="crop"
-          edge-snap="0.02"
         ></crop-image>
       </div>
 
@@ -338,6 +345,14 @@
         </div>
 
         <div class="control-group">
+          <label>Shape</label>
+          <div class="segmented" id="shape-selector">
+            <button class="active" data-shape="rect">Rectangle</button>
+            <button data-shape="circle">Circle</button>
+          </div>
+        </div>
+
+        <div class="control-group">
           <label>Mode</label>
           <div class="segmented" id="mode-selector">
             <button class="active" data-mode="crop">Crop</button>
@@ -347,13 +362,13 @@
 
         <div class="control-group">
           <div class="toggle-row">
-            <span>Edge Snap</span>
-            <div class="toggle on" id="edge-snap-toggle" role="switch" aria-checked="true" tabindex="0"></div>
-          </div>
-          <div class="toggle-row">
             <span>Even Padding</span>
             <div class="toggle" id="even-padding-toggle" role="switch" aria-checked="false" tabindex="0"></div>
           </div>
+        </div>
+
+        <div class="hint">
+          Drag to pan. Scroll or pinch to zoom. Double-click to toggle fit/2x. Arrow keys pan, +/- zoom, 0 resets.
         </div>
       </div>
 
@@ -399,6 +414,24 @@
       }
     });
 
+    // Shape selector
+    document.getElementById('shape-selector').addEventListener('click', (e) => {
+      const btn = e.target.closest('button');
+      if (!btn) return;
+      btn.parentElement.querySelectorAll('button').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      const shape = btn.dataset.shape;
+      if (shape === 'circle') {
+        cropper.setAttribute('shape', 'circle');
+        // Circle forces 1:1, update ratio selector to reflect
+        document.querySelectorAll('#ratio-selector button').forEach(b => b.classList.remove('active'));
+        document.querySelector('#ratio-selector button[data-ratio="1/1"]').classList.add('active');
+        cropper.setAttribute('aspect-ratio', '1/1');
+      } else {
+        cropper.setAttribute('shape', 'rect');
+      }
+    });
+
     // Mode selector
     document.getElementById('mode-selector').addEventListener('click', (e) => {
       const btn = e.target.closest('button');
@@ -421,10 +454,6 @@
         if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); toggle(); }
       });
     }
-
-    setupToggle('edge-snap-toggle', (on) => {
-      cropper.setAttribute('edge-snap', on ? '0.02' : '0');
-    });
 
     setupToggle('even-padding-toggle', (on) => {
       if (on) cropper.setAttribute('even-padding', '');

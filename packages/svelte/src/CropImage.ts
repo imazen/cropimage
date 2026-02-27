@@ -26,6 +26,7 @@ export interface CropImageProps {
   name?: string;
   adapter?: 'generic' | 'imageflow' | 'imageresizer';
   disabled?: boolean;
+  shape?: 'rect' | 'circle';
 }
 
 /**

@@ -32,6 +32,7 @@ export interface CropImageProps extends Omit<HTMLAttributes<HTMLElement>, 'onCha
   name?: string;
   adapter?: 'generic' | 'imageflow' | 'imageresizer';
   disabled?: boolean;
+  shape?: 'rect' | 'circle';
   onChange?: (detail: CropChangeDetail) => void;
   onCommit?: (detail: CropChangeDetail) => void;
 }
@@ -61,6 +62,7 @@ export const CropImage = forwardRef<CropImageRef, CropImageProps>(
       name,
       adapter,
       disabled,
+      shape,
       onChange,
       onCommit,
       ...rest
@@ -120,6 +122,7 @@ export const CropImage = forwardRef<CropImageRef, CropImageProps>(
     if (name) attrs.name = name;
     if (adapter) attrs.adapter = adapter;
     if (disabled) attrs.disabled = '';
+    if (shape) attrs.shape = shape;
 
     // @ts-expect-error - crop-image is a custom element not known to React's JSX types
     return <crop-image ref={elRef} {...attrs} />;
