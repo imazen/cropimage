@@ -199,18 +199,19 @@ export const STYLES = `
 /* Snap ratio label (shown during frame resize) */
 .snap-label {
   position: absolute;
-  top: -26px;
+  top: 8px;
   left: 50%;
   transform: translateX(-50%);
-  background: rgba(0, 0, 0, 0.75);
-  color: var(--crop-border-color);
-  font: 500 11px/1 system-ui, -apple-system, sans-serif;
-  padding: 4px 8px;
-  border-radius: 3px;
+  background: rgba(0, 0, 0, 0.82);
+  color: #fff;
+  font: 600 12px/1 system-ui, -apple-system, sans-serif;
+  padding: 5px 10px;
+  border-radius: 4px;
   white-space: nowrap;
   opacity: 0;
-  transition: opacity 0.12s;
+  transition: opacity 0.15s;
   pointer-events: none;
+  z-index: 10;
 }
 
 .snap-label.visible {

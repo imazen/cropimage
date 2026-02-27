@@ -5,29 +5,29 @@ settings:
   excludeLinksFromLockfile: false
 
 overrides:
-  minimatch: ^10.0.0
+  minimatch: '>=10.2.3'
 
 importers:
 
   .:
     devDependencies:
       typedoc:
-        specifier: ^0.28.0
+        specifier: ^0.28.17
         version: 0.28.17(typescript@5.9.3)
       typescript:
-        specifier: ^5.7.0
+        specifier: ^5.9.3
         version: 5.9.3
       vitest:
-        specifier: ^4.0.0
+        specifier: ^4.0.18
         version: 4.0.18(yaml@2.8.2)
 
   packages/core:
     devDependencies:
       vite:
-        specifier: ^7.0.0
+        specifier: ^7.3.1
         version: 7.3.1(yaml@2.8.2)
       vite-plugin-dts:
-        specifier: ^4.0.0
+        specifier: ^4.5.4
         version: 4.5.4(rollup@4.59.0)(typescript@5.9.3)(vite@7.3.1(yaml@2.8.2))
 
   packages/demo:
@@ -40,7 +40,7 @@ importers:
         version: link:../core
     devDependencies:
       vite:
-        specifier: ^7.0.0
+        specifier: ^7.3.1
         version: 7.3.1(yaml@2.8.2)
 
   packages/react:
@@ -53,19 +53,19 @@ importers:
         version: link:../core
     devDependencies:
       '@types/react':
-        specifier: ^19.0.0
+        specifier: ^19.2.14
         version: 19.2.14
       react:
-        specifier: ^19.0.0
+        specifier: ^19.2.4
         version: 19.2.4
       react-dom:
-        specifier: ^19.0.0
+        specifier: ^19.2.4
         version: 19.2.4(react@19.2.4)
       vite:
-        specifier: ^7.0.0
+        specifier: ^7.3.1
         version: 7.3.1(yaml@2.8.2)
       vite-plugin-dts:
-        specifier: ^4.0.0
+        specifier: ^4.5.4
         version: 4.5.4(rollup@4.59.0)(typescript@5.9.3)(vite@7.3.1(yaml@2.8.2))
 
   packages/svelte:
@@ -78,13 +78,13 @@ importers:
         version: link:../core
     devDependencies:
       svelte:
-        specifier: ^5.0.0
+        specifier: ^5.53.5
         version: 5.53.5
       vite:
-        specifier: ^7.0.0
+        specifier: ^7.3.1
         version: 7.3.1(yaml@2.8.2)
       vite-plugin-dts:
-        specifier: ^4.0.0
+        specifier: ^4.5.4
         version: 4.5.4(rollup@4.59.0)(typescript@5.9.3)(vite@7.3.1(yaml@2.8.2))
 
   packages/ui:
@@ -94,10 +94,10 @@ importers:
         version: link:../core
     devDependencies:
       vite:
-        specifier: ^7.0.0
+        specifier: ^7.3.1
         version: 7.3.1(yaml@2.8.2)
       vite-plugin-dts:
-        specifier: ^4.0.0
+        specifier: ^4.5.4
         version: 4.5.4(rollup@4.59.0)(typescript@5.9.3)(vite@7.3.1(yaml@2.8.2))
 
 packages:
@@ -798,9 +798,9 @@ packages:
   mdurl@2.0.0:
     resolution: {integrity: sha512-Lf+9+2r+Tdp5wXDXC4PcIBjTDtq4UKjCPMQhKIuzpJNW0b96kVqSwW0bT7FhRSfmAiFYgP+SCRvdrDozfh0U5w==}
 
-  minimatch@10.2.1:
-    resolution: {integrity: sha512-MClCe8IL5nRRmawL6ib/eT4oLyeKMGCghibcDWK+J0hh0Q8kqSdia6BvbRMVk6mPa6WqUa5uR2oxt6C5jd533A==}
-    engines: {node: 20 || >=22}
+  minimatch@10.2.4:
+    resolution: {integrity: sha512-oRjTw/97aTBN0RHbYCdtF1MQfvusSIBQM0IZEgzl6426+8jSC0nF1a/GmnVLpfB9yyr6g6FTqWqiZVbxrtaCIg==}
+    engines: {node: 18 || 20 || >=22}
 
   mlly@1.8.0:
     resolution: {integrity: sha512-l8D9ODSRWLe2KHJSifWGwBqpTZXIXTeo8mlKjY+E2HAakaTeNpqAyBZ8GSqLzHgw4XmHmC8whvpjJNMbFZN7/g==}
@@ -1206,7 +1206,7 @@ snapshots:
       '@rushstack/ts-command-line': 5.3.3
       diff: 8.0.3
       lodash: 4.17.23
-      minimatch: 10.2.1
+      minimatch: 10.2.4
       resolve: 1.22.11
       semver: 7.5.4
       source-map: 0.6.1
@@ -1464,7 +1464,7 @@ snapshots:
       '@vue/compiler-vue2': 2.7.16
       '@vue/shared': 3.5.29
       alien-signals: 0.4.14
-      minimatch: 10.2.1
+      minimatch: 10.2.4
       muggle-string: 0.4.1
       path-browserify: 1.0.1
     optionalDependencies:
@@ -1668,7 +1668,7 @@ snapshots:
 
   mdurl@2.0.0: {}
 
-  minimatch@10.2.1:
+  minimatch@10.2.4:
     dependencies:
       brace-expansion: 5.0.3
 
@@ -1828,7 +1828,7 @@ snapshots:
       '@gerrit0/mini-shiki': 3.23.0
       lunr: 2.3.9
       markdown-it: 14.1.1
-      minimatch: 10.2.1
+      minimatch: 10.2.4
       typescript: 5.9.3
       yaml: 2.8.2
 

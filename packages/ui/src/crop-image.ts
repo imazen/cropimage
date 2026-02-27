@@ -62,7 +62,7 @@ const SNAP_RATIOS: Array<{ value: number; label: string }> = [
   { value: 9 / 16, label: '9 : 16' },
 ];
 
-const DEFAULT_SNAP_THRESHOLD = 0.03;
+const DEFAULT_SNAP_THRESHOLD = 0.05;
 
 export class CropImageElement extends HTMLElement {
   static formAssociated = true;
