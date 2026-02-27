@@ -314,6 +314,15 @@
           </div>
         </div>
 
+        <div class="control-group">
+          <label>Snap Threshold <span id="snap-value" style="font-family: var(--mono); color: var(--accent); font-size: 0.73rem;">3%</span></label>
+          <input type="range" id="snap-slider" min="0" max="10" step="0.5" value="3" style="width: 100%; accent-color: var(--accent);">
+          <div style="display: flex; justify-content: space-between; font-size: 0.67rem; color: var(--text-dim); margin-top: -0.25rem;">
+            <span>Off</span>
+            <span>10%</span>
+          </div>
+        </div>
+
         <div class="hint">
           Drag image to pan. Scroll or pinch to zoom. Drag frame corners/edges to resize crop. Double-click to toggle fit/2x. Arrow keys pan, +/- zoom, 0 resets.
         </div>
@@ -386,6 +395,20 @@
       btn.parentElement.querySelectorAll('button').forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
       cropper.setAttribute('mode', btn.dataset.mode);
+    });
+
+    // Snap threshold slider
+    const snapSlider = document.getElementById('snap-slider');
+    const snapValue = document.getElementById('snap-value');
+    snapSlider.addEventListener('input', () => {
+      const pct = Number(snapSlider.value);
+      snapValue.textContent = pct === 0 ? 'Off' : pct + '%';
+      const fraction = pct / 100;
+      if (fraction === 0) {
+        cropper.setAttribute('snap-threshold', '0');
+      } else {
+        cropper.setAttribute('snap-threshold', String(fraction));
+      }
     });
 
     // Output

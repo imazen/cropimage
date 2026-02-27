@@ -28,6 +28,7 @@ export interface CropImageProps {
   disabled?: boolean;
   shape?: 'rect' | 'circle';
   'max-zoom'?: string;
+  'snap-threshold'?: string;
 }
 
 /**

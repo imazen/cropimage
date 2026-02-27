@@ -62,7 +62,7 @@ const SNAP_RATIOS: Array<{ value: number; label: string }> = [
   { value: 9 / 16, label: '9 : 16' },
 ];
 
-const SNAP_THRESHOLD = 0.06;
+const DEFAULT_SNAP_THRESHOLD = 0.03;
 
 export class CropImageElement extends HTMLElement {
   static formAssociated = true;
@@ -72,7 +72,7 @@ export class CropImageElement extends HTMLElement {
       'src', 'mode', 'aspect-ratio', 'aspect-ratios',
       'edge-snap', 'even-padding', 'min-width', 'min-height',
       'max-width', 'max-height', 'value', 'name', 'adapter',
-      'disabled', 'shape', 'max-zoom',
+      'disabled', 'shape', 'max-zoom', 'snap-threshold',
     ];
   }
 
@@ -97,6 +97,7 @@ export class CropImageElement extends HTMLElement {
   #imgNatW = 0;
   #imgNatH = 0;
   #userFrameAR: number | null = null;
+  #snapThreshold: number = DEFAULT_SNAP_THRESHOLD;
 
   #resizeObserver: ResizeObserver;
   #cleanupPan: (() => void) | null = null;
@@ -264,6 +265,11 @@ export class CropImageElement extends HTMLElement {
           this.#emitChange();
         }
         break;
+      case 'snap-threshold': {
+        const v = value != null ? Number(value) : DEFAULT_SNAP_THRESHOLD;
+        this.#snapThreshold = (isFinite(v) && v >= 0) ? v : DEFAULT_SNAP_THRESHOLD;
+        break;
+      }
       default:
         this.#syncConfigFromAttributes();
         if (this.#imageLoaded) {
@@ -375,6 +381,12 @@ export class CropImageElement extends HTMLElement {
     }
 
     this.#shape = this.getAttribute('shape') === 'circle' ? 'circle' : 'rect';
+
+    const snapThresh = this.getAttribute('snap-threshold');
+    if (snapThresh != null) {
+      const v = Number(snapThresh);
+      this.#snapThreshold = (isFinite(v) && v >= 0) ? v : DEFAULT_SNAP_THRESHOLD;
+    }
   }
 
   #getFrameAR(): number | null {
@@ -731,7 +743,7 @@ export class CropImageElement extends HTMLElement {
     // Snap-to-AR in free mode
     if (lockedAR === null && this.#dragFrameRect.w > 0 && this.#dragFrameRect.h > 0) {
       const ar = this.#dragFrameRect.w / this.#dragFrameRect.h;
-      const snap = findSnapRatio(ar, this.#getImageAR());
+      const snap = findSnapRatio(ar, this.#getImageAR(), this.#snapThreshold);
       if (snap) {
         // Re-compute with the snapped AR
         this.#dragFrameRect = computeResizedFrame(
@@ -885,14 +897,17 @@ function parseAspectRatio(str: string): AspectRatio | null {
 function findSnapRatio(
   ar: number,
   imageAR: number,
+  threshold: number,
 ): { ratio: number; label: string } | null {
+  if (threshold <= 0) return null;
+
   const candidates = [
     ...SNAP_RATIOS,
     { value: imageAR, label: 'Original' },
   ];
 
   let best: { ratio: number; label: string } | null = null;
-  let bestDist = SNAP_THRESHOLD;
+  let bestDist = threshold;
 
   for (const c of candidates) {
     const dist = Math.abs(ar - c.value) / c.value;
