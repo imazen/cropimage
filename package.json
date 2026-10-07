@@ -7,9 +7,9 @@
     "dev": "pnpm --filter @imazen/crop-image-demo dev"
   },
   "devDependencies": {
-    "typedoc": "^0.28.17",
+    "typedoc": "^0.28.20",
     "typescript": "^5.9.3",
-    "vitest": "^4.0.18"
+    "vitest": "^4.1.11"
   },
   "pnpm": {
     "onlyBuiltDependencies": [

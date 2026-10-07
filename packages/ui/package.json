@@ -13,7 +13,9 @@
     },
     "./crop-image.iife.js": "./dist/crop-image.iife.js"
   },
-  "files": ["dist"],
+  "files": [
+    "dist"
+  ],
   "scripts": {
     "build": "vite build"
   },
@@ -21,7 +23,7 @@
     "@imazen/crop-image-core": "workspace:*"
   },
   "devDependencies": {
-    "vite": "^7.0.0",
-    "vite-plugin-dts": "^4.0.0"
+    "vite": "^7.3.7",
+    "vite-plugin-dts": "^4.5.4"
   }
 }
